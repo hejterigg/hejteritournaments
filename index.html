@@ -1,0 +1,2021 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hejteri — Competitive Standoff 2 Tournaments</title>
+<meta name="description" content="Hejteri is the competitive platform for Standoff 2 tournaments — register your clan, climb the leaderboard, compete for prize pools." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+
+<style>
+/* ============ RESET & BASE ============ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+* { -webkit-tap-highlight-color: transparent; }
+
+:root{
+  --bg:#0E0E10;
+  --bg-soft:#141416;
+  --panel:#17171A;
+  --panel-soft:#1D1D21;
+  --line:rgba(255,255,255,.08);
+  --line-soft:rgba(255,255,255,.05);
+  --ink:#F2F2F0;
+  --ink-soft:#A9A9B0;
+  --ink-dim:#92929A;
+  --acid:#C8FF3D;
+  --acid-soft:rgba(200,255,61,.1);
+  --acid-dim:#8FB82B;
+  --live:#FF5C5C;
+  --win:#3DD68C;
+  --gold:#E8B84B;
+  --silver:#B8C2CE;
+  --bronze:#D08A5C;
+  --radius-clip:16px;
+  --radius-clip-sm:10px;
+  --max-w:1320px;
+}
+
+body{
+  font-family:'Inter',Arial,sans-serif;
+  background:var(--bg);
+  color:var(--ink);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+
+h1,h2,h3,h4{ font-family:'Archivo',Arial,sans-serif; line-height:1.1; font-weight:800; color:var(--ink); }
+a{ color:inherit; text-decoration:none; }
+img{ max-width:100%; display:block; }
+button{ font-family:inherit; cursor:pointer; background:none; border:none; color:inherit; }
+input,textarea,select{ font-family:inherit; font-size:1rem; color:inherit; }
+ul{ list-style:none; }
+::selection{ background:var(--acid); color:#0E0E10; }
+
+.font-mono{ font-family:'JetBrains Mono',monospace; }
+.font-display{ font-family:'Archivo',Arial,sans-serif; }
+
+.sr-only{
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+.skip-link{
+  position:absolute; top:-50px; left:8px; z-index:200;
+  background:var(--acid); color:#0E0E10; padding:10px 16px; border-radius:4px;
+  font-weight:600; transition:top .2s ease;
+}
+.skip-link:focus{ top:8px; }
+
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible{
+  outline:3px solid var(--acid); outline-offset:3px; border-radius:2px;
+}
+
+/* ============ LAYOUT HELPERS ============ */
+.wrap{ max-width:var(--max-w); margin:0 auto; padding:0 20px; }
+@media (min-width:640px){ .wrap{ padding:0 32px; } }
+
+.clip-card{
+  clip-path: polygon(0 var(--radius-clip), var(--radius-clip) 0, 100% 0, 100% calc(100% - var(--radius-clip)), calc(100% - var(--radius-clip)) 100%, 0 100%);
+}
+.clip-card-sm{
+  clip-path: polygon(0 var(--radius-clip-sm), var(--radius-clip-sm) 0, 100% 0, 100% calc(100% - var(--radius-clip-sm)), calc(100% - var(--radius-clip-sm)) 100%, 0 100%);
+}
+
+.btn{
+  font-family:'Archivo',Arial,sans-serif;
+  font-weight:700;
+  font-size:.875rem;
+  letter-spacing:.03em;
+  text-transform:uppercase;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  min-height:48px;
+  padding:14px 24px;
+  transition:background-color .2s ease, color .2s ease, box-shadow .2s ease, border-color .2s ease, transform .15s ease;
+  text-align:center;
+}
+.btn-primary{ background:var(--acid); color:#0E0E10; }
+.btn-primary:hover{ background:#D8FF6B; box-shadow:0 0 28px rgba(200,255,61,.3); }
+.btn-outline{ border:2px solid var(--line); color:var(--ink); }
+.btn-outline:hover{ background:var(--panel-soft); border-color:var(--acid); }
+.btn-disabled{ background:var(--panel); color:var(--ink-dim); cursor:not-allowed; border:1px solid var(--line); }
+.btn:disabled{ background:var(--win); color:#0E0E10; cursor:default; }
+
+/* ============ ICONS ============ */
+.icon{ width:20px; height:20px; flex-shrink:0; stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.icon-sm{ width:16px; height:16px; }
+.icon-lg{ width:22px; height:22px; }
+
+/* ============ AUTH GATE ============ */
+.app-root-hidden{ display:none; }
+
+.auth-gate{
+  position:fixed; inset:0; z-index:1000;
+  background:var(--bg);
+  display:flex; align-items:center; justify-content:center;
+  padding:24px;
+  overflow-y:auto;
+}
+.auth-gate.is-hidden{ display:none; }
+.auth-gate-inner{ width:100%; max-width:420px; }
+
+.auth-loading{ display:flex; flex-direction:column; align-items:center; gap:16px; color:var(--ink-soft); font-family:'JetBrains Mono',monospace; font-size:.875rem; }
+.auth-spinner{
+  width:32px; height:32px; border-radius:50%;
+  border:3px solid var(--line); border-top-color:var(--acid);
+  animation:auth-spin .8s linear infinite;
+}
+@keyframes auth-spin{ to{ transform:rotate(360deg); } }
+
+.auth-form{ display:flex; flex-direction:column; gap:16px; }
+.auth-brand{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:8px; }
+.auth-brand .brand-name{ font-weight:800; font-size:1.25rem; color:var(--ink); }
+
+.auth-tabs{ display:flex; background:var(--panel); border:1px solid var(--line); padding:4px; gap:4px; }
+.auth-tab{
+  flex:1; padding:10px; min-height:40px; font-family:'Archivo',sans-serif; font-weight:700;
+  font-size:.8125rem; text-transform:uppercase; letter-spacing:.03em; color:var(--ink-dim);
+  border-radius:2px; transition:background .2s ease, color .2s ease;
+}
+.auth-tab[aria-selected="true"]{ background:var(--acid); color:#0E0E10; }
+
+.auth-sub{ color:var(--ink-soft); font-size:.875rem; line-height:1.5; text-align:center; }
+
+.auth-error{
+  background:rgba(255,92,92,.1); border:1px solid rgba(255,92,92,.3); color:var(--live);
+  padding:10px 14px; border-radius:2px; font-size:.8125rem; line-height:1.5;
+}
+
+.field-row-1{ display:flex; flex-direction:column; gap:6px; }
+
+.auth-divider{ display:flex; align-items:center; gap:12px; color:var(--ink-dim); font-family:'JetBrains Mono',monospace; font-size:.75rem; text-transform:uppercase; letter-spacing:.04em; }
+.auth-divider::before, .auth-divider::after{ content:''; flex:1; height:1px; background:var(--line); }
+
+.auth-discord-btn{ gap:10px; }
+.auth-footnote{ text-align:center; font-size:.75rem; color:var(--ink-dim); line-height:1.5; }
+
+.auth-userbar{
+  display:flex; align-items:center; gap:10px; font-size:.8125rem; color:var(--ink-soft);
+}
+.auth-userbar .avatar{
+  width:28px; height:28px; border-radius:50%; background:var(--acid-soft); color:var(--acid);
+  display:flex; align-items:center; justify-content:center; font-family:'Archivo',sans-serif; font-weight:800; font-size:.75rem; flex-shrink:0;
+}
+.auth-signout{ color:var(--ink-dim); font-size:.8125rem; transition:color .2s ease; }
+.auth-signout:hover{ color:var(--live); }
+
+/* ============ HEADER ============ */
+.site-header{
+  position:sticky; top:0; z-index:50;
+  background:rgba(14,14,16,.88);
+  backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);
+}
+.nav{ display:flex; align-items:center; justify-content:space-between; height:72px; }
+.brand{ display:flex; align-items:center; gap:10px; flex-shrink:0; }
+.brand-mark{ width:40px; height:40px; background:var(--acid); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.brand-mark .icon{ stroke:#0E0E10; }
+.brand-name{ font-weight:800; font-size:1.25rem; letter-spacing:-.01em; color:var(--ink); }
+
+.nav-links{ display:none; align-items:center; gap:32px; font-weight:500; font-size:.9375rem; }
+.nav-link{ position:relative; padding:8px 0; color:var(--ink-soft); transition:color .2s ease; }
+.nav-link:hover{ color:var(--ink); }
+.nav-link::after{ content:''; position:absolute; left:0; bottom:-4px; height:2px; width:0%; background:var(--acid); transition:width .25s ease; }
+.nav-link:hover::after, .nav-link:focus-visible::after{ width:100%; }
+
+.nav-actions{ display:none; align-items:center; gap:12px; }
+.nav-live{
+  display:inline-flex; align-items:center; gap:7px;
+  font-family:'JetBrains Mono',monospace; font-size:.75rem; font-weight:600;
+  color:var(--live); border:1px solid rgba(255,92,92,.35); background:rgba(255,92,92,.08);
+  padding:6px 12px; border-radius:3px; letter-spacing:.02em;
+}
+.signin-link{ font-weight:500; font-size:.9375rem; padding:10px 16px; border-radius:4px; color:var(--ink-soft); transition:background .2s ease,color .2s ease; }
+.signin-link:hover{ background:var(--panel-soft); color:var(--ink); }
+
+.menu-toggle{ display:flex; align-items:center; justify-content:center; width:48px; height:48px; margin-right:-8px; color:var(--ink); }
+
+.mobile-menu{
+  position:absolute; top:72px; left:0; right:0;
+  background:var(--bg-soft); border-bottom:1px solid var(--line); box-shadow:0 12px 32px -8px rgba(0,0,0,.6);
+  padding:20px; display:flex; flex-direction:column; gap:4px;
+  transform:translateY(-8px); opacity:0; pointer-events:none;
+  transition:transform .3s cubic-bezier(.65,0,.35,1), opacity .25s ease;
+  z-index:60;
+}
+.mobile-menu.is-open{ transform:translateY(0); opacity:1; pointer-events:auto; }
+.mobile-menu a{ display:flex; align-items:center; min-height:48px; padding:0 12px; font-weight:500; font-size:1rem; border-radius:4px; color:var(--ink-soft); }
+.mobile-menu a:hover{ background:var(--panel-soft); color:var(--ink); }
+.mobile-divider{ height:1px; background:var(--line); margin:8px 0; }
+.mobile-cta{ justify-content:center; margin-top:4px; }
+
+@media (min-width:1024px){
+  .nav-links{ display:flex; }
+  .nav-actions{ display:flex; }
+  .menu-toggle{ display:none; }
+  .mobile-menu{ display:none !important; }
+}
+
+/* ============ HERO (asymmetric, off-center) ============ */
+.hero{ position:relative; overflow:hidden; border-bottom:1px solid var(--line); background:var(--bg); }
+
+/* Pure-CSS animated fallback — always visible behind the 3D canvas.
+   If Three.js loads, JS fades this out once the scene renders its first frame.
+   If Three.js fails to load (blocked CDN, restrictive in-app browser, etc.),
+   this keeps the hero animated instead of going flat/static. */
+.hero-fallback{
+  position:absolute; inset:0; z-index:0; pointer-events:none;
+  opacity:1; transition:opacity .6s ease;
+}
+.hero-fallback::before, .hero-fallback::after{
+  content:''; position:absolute; border-radius:50%; filter:blur(70px); will-change:transform, opacity;
+}
+.hero-fallback::before{
+  width:60vw; height:60vw; max-width:740px; max-height:740px; top:-22%; left:-12%;
+  background:radial-gradient(circle, rgba(200,255,61,.16), rgba(200,255,61,0) 70%);
+  animation:fallback-drift-a 22s ease-in-out infinite;
+}
+.hero-fallback::after{
+  width:50vw; height:50vw; max-width:620px; max-height:620px; top:18%; right:-12%;
+  background:radial-gradient(circle, rgba(200,255,61,.1), rgba(200,255,61,0) 70%);
+  animation:fallback-drift-b 28s ease-in-out infinite;
+}
+@keyframes fallback-drift-a{
+  0%,100%{ transform:translate(0,0) scale(1); opacity:.9; }
+  50%{ transform:translate(7%,9%) scale(1.14); opacity:1; }
+}
+@keyframes fallback-drift-b{
+  0%,100%{ transform:translate(0,0) scale(1); opacity:.7; }
+  50%{ transform:translate(-8%,-7%) scale(1.1); opacity:.95; }
+}
+.hero-fallback.is-hidden{ opacity:0; }
+
+.hero-noise{
+  position:absolute; inset:0; pointer-events:none; opacity:.35;
+  background-image:radial-gradient(circle at 1px 1px, rgba(255,255,255,.06) 1px, transparent 0);
+  background-size:26px 26px;
+}
+.hero-glow{
+  position:absolute; top:-30%; right:-10%; width:55vw; height:55vw; max-width:680px; max-height:680px;
+  background:radial-gradient(circle, rgba(200,255,61,.1), rgba(200,255,61,0) 70%);
+  filter:blur(60px); pointer-events:none; z-index:1;
+}
+#hero-canvas{
+  position:absolute; inset:0; z-index:0; width:100%; height:100%; display:block;
+  cursor:grab;
+}
+#hero-canvas:active{ cursor:grabbing; }
+.hero-shell{ position:relative; display:flex; flex-direction:column; z-index:2; }
+.hero-main{ display:grid; grid-template-columns:1fr; }
+@media (min-width:1024px){ .hero-main{ grid-template-columns:1fr 340px; } }
+
+.hero-copy{ padding:56px 20px 48px; }
+@media (min-width:640px){ .hero-copy{ padding:80px 32px 64px; } }
+@media (min-width:1024px){ .hero-copy{ padding:96px 56px 80px; max-width:760px; } }
+
+.badge{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family:'JetBrains Mono',monospace; font-size:.75rem; font-weight:500;
+  letter-spacing:.02em; color:var(--ink-soft);
+  border:1px solid var(--line); background:rgba(255,255,255,.02); padding:6px 12px; border-radius:3px;
+  margin-bottom:28px;
+}
+.pulse-dot{ position:relative; width:8px; height:8px; border-radius:50%; background:var(--live); flex-shrink:0; }
+.pulse-dot::before{ content:''; position:absolute; inset:-4px; border-radius:50%; background:var(--live); opacity:.5; animation:pulse-ring 1.6s cubic-bezier(.4,0,.6,1) infinite; }
+@keyframes pulse-ring{ 0%{transform:scale(.7);opacity:.6;} 70%{transform:scale(1.6);opacity:0;} 100%{transform:scale(1.6);opacity:0;} }
+
+.hero h1{ font-size:2.5rem; font-weight:900; letter-spacing:-.02em; line-height:1.04; }
+@media (min-width:640px){ .hero h1{ font-size:3.5rem; } }
+@media (min-width:1024px){ .hero h1{ font-size:4.5rem; } }
+.hero h1 .accent-word{ color:var(--acid); }
+
+.hero p.lede{ margin-top:24px; font-size:1.125rem; color:var(--ink-soft); max-width:480px; line-height:1.6; }
+
+.hero-ctas{ display:flex; flex-direction:column; gap:14px; margin-top:36px; }
+@media (min-width:480px){ .hero-ctas{ flex-direction:row; } }
+
+.hero-stats{ display:flex; align-items:center; gap:28px; margin-top:48px; font-family:'JetBrains Mono',monospace; flex-wrap:wrap; }
+.hero-stats .stat-num{ font-size:1.5rem; font-weight:700; color:var(--ink); }
+.hero-stats .stat-label{ font-size:.75rem; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.04em; margin-top:2px; }
+.stat-divider{ width:1px; height:40px; background:var(--line); }
+
+/* Vertical live strip on the right edge of hero */
+.hero-live-strip{
+  border-top:1px solid var(--line);
+  background:var(--panel);
+  padding:28px 24px;
+  display:flex; flex-direction:column;
+}
+@media (min-width:1024px){
+  .hero-live-strip{ border-top:none; border-left:1px solid var(--line); padding:96px 28px 32px; }
+}
+.live-strip-label{
+  display:flex; align-items:center; gap:8px;
+  font-family:'JetBrains Mono',monospace; font-size:.6875rem; font-weight:600;
+  color:var(--live); text-transform:uppercase; letter-spacing:.05em; margin-bottom:20px;
+}
+.live-empty{ flex:1; display:flex; flex-direction:column; align-items:flex-start; justify-content:center; gap:10px; padding:24px 0; color:var(--ink-dim); }
+.live-empty .icon{ color:var(--ink-dim); margin-bottom:4px; }
+.live-empty-title{ font-family:'Archivo',sans-serif; font-weight:700; font-size:.9375rem; color:var(--ink-soft); }
+.live-empty-sub{ font-family:'Inter',sans-serif; font-size:.8125rem; color:var(--ink-dim); line-height:1.5; max-width:240px; }
+.live-strip-cta{ margin-top:20px; }
+
+/* ============ TICKER (marquee strip, breaks grid pattern) ============ */
+.ticker-wrap{ border-top:1px solid var(--line); background:var(--panel); overflow:hidden; }
+.ticker-track{
+  display:flex; width:max-content; padding:14px 0;
+  font-family:'JetBrains Mono',monospace; font-size:.8125rem; color:var(--ink-soft);
+  animation:ticker-scroll 34s linear infinite;
+}
+.ticker-wrap:hover .ticker-track{ animation-play-state:paused; }
+@keyframes ticker-scroll{ from{ transform:translateX(0); } to{ transform:translateX(-50%); } }
+.ticker-item{ display:flex; align-items:center; gap:8px; padding:0 24px; flex-shrink:0; white-space:nowrap; border-left:1px solid var(--line); }
+.ticker-item:first-child{ border-left:none; }
+.ticker-item .dot{ width:6px; height:6px; border-radius:50%; background:var(--live); flex-shrink:0; }
+.ticker-item .chip{ color:var(--acid); font-weight:600; }
+
+.ticker-empty-inner{
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  padding:14px 20px; text-align:center;
+  font-size:.8125rem; color:var(--ink-dim);
+}
+.pulse-dot-static{ width:6px; height:6px; border-radius:50%; background:var(--ink-dim); flex-shrink:0; }
+
+/* ============ NAV TILES (homepage section menu, replaces pure scroll-stacking) ============ */
+.nav-tiles-section{ border-bottom:1px solid var(--line); background:var(--bg-soft); }
+.nav-tiles-head{ margin-bottom:32px; }
+.nav-tiles-head .eyebrow{ margin-bottom:8px; }
+.nav-tiles-head h2{ font-size:1.625rem; }
+@media (min-width:640px){ .nav-tiles-head h2{ font-size:2rem; } }
+
+.nav-tiles-grid{ display:grid; gap:16px; grid-template-columns:1fr; }
+@media (min-width:560px){ .nav-tiles-grid{ grid-template-columns:1fr 1fr; } }
+@media (min-width:1024px){ .nav-tiles-grid{ grid-template-columns:repeat(4,1fr); } }
+
+.nav-tile{
+  position:relative; display:flex; flex-direction:column; gap:14px;
+  background:var(--panel); border:1px solid var(--line); padding:28px 24px;
+  min-height:180px; overflow:hidden;
+  transition:transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+.nav-tile:hover, .nav-tile:focus-visible{
+  transform:translateY(-4px);
+  border-color:rgba(200,255,61,.4);
+  box-shadow:0 20px 44px -16px rgba(0,0,0,.65);
+}
+.nav-tile-charge{
+  position:absolute; top:0; left:0; height:3px; width:0%; background:var(--acid);
+  transition:width .4s cubic-bezier(.65,0,.35,1); box-shadow:0 0 12px rgba(200,255,61,.6);
+}
+.nav-tile:hover .nav-tile-charge, .nav-tile:focus-visible .nav-tile-charge{ width:100%; }
+
+.nav-tile-icon{
+  width:48px; height:48px; background:var(--acid-soft); color:var(--acid);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.nav-tile-body{ flex:1; }
+.nav-tile-body h3{ font-size:1.125rem; color:var(--ink); }
+.nav-tile-body p{ color:var(--ink-soft); font-size:.875rem; margin-top:6px; line-height:1.55; }
+.nav-tile-arrow{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:'JetBrains Mono',monospace; font-size:.75rem; font-weight:600;
+  color:var(--ink-dim); text-transform:uppercase; letter-spacing:.03em;
+  transition:color .2s ease, gap .2s ease;
+}
+.nav-tile:hover .nav-tile-arrow, .nav-tile:focus-visible .nav-tile-arrow{ color:var(--acid); gap:10px; }
+.nav-tile-arrow .icon{ width:14px; height:14px; transition:transform .2s ease; }
+.nav-tile:hover .nav-tile-arrow .icon, .nav-tile:focus-visible .nav-tile-arrow .icon{ transform:translateX(2px); }
+
+.nav-tile-tag{
+  position:absolute; top:20px; right:20px;
+  font-family:'JetBrains Mono',monospace; font-size:.625rem; font-weight:600;
+  letter-spacing:.04em; text-transform:uppercase; padding:4px 8px; border-radius:2px;
+}
+.nav-tile-tag.live{ background:rgba(255,92,92,.12); color:var(--live); }
+.nav-tile-tag.open{ background:var(--acid-soft); color:var(--acid); }
+
+/* Section "page" framing — gives each scrolled-to section its own distinct boundary
+   rather than flowing directly into the next, reinforcing the tile-jump model */
+.page-section{ border-bottom:1px solid var(--line); scroll-margin-top:72px; }
+.page-section-head-row{
+  display:flex; align-items:center; justify-content:space-between; gap:16px;
+  padding:18px 0; margin-bottom:8px; border-bottom:1px solid var(--line);
+}
+.page-section-back{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:'JetBrains Mono',monospace; font-size:.75rem; font-weight:600;
+  color:var(--ink-dim); text-transform:uppercase; letter-spacing:.03em;
+  transition:color .2s ease;
+}
+.page-section-back:hover, .page-section-back:focus-visible{ color:var(--acid); }
+.page-section-back .icon{ width:14px; height:14px; }
+
+/* ============ SECTION HEADERS ============ */
+.section{ padding:72px 0; }
+.section-tight{ padding:48px 0; }
+.eyebrow{
+  font-family:'JetBrains Mono',monospace; font-size:.75rem; font-weight:600;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--acid); margin-bottom:12px;
+}
+.section-head{ display:flex; flex-direction:column; gap:24px; margin-bottom:40px; }
+@media (min-width:640px){ .section-head{ flex-direction:row; align-items:flex-end; justify-content:space-between; } }
+.section-head h2{ font-size:1.875rem; }
+@media (min-width:640px){ .section-head h2{ font-size:2.25rem; } }
+.section-head .desc{ color:var(--ink-soft); max-width:360px; }
+
+/* ============ FEATURED LIVE MATCH (split panel, full width) ============ */
+.featured-match{
+  background:var(--panel); border:1px solid var(--line); overflow:hidden;
+  display:grid; grid-template-columns:1fr; margin-bottom:40px;
+}
+@media (min-width:900px){ .featured-match{ grid-template-columns:1.1fr 1fr; } }
+.featured-media{ position:relative; min-height:240px; overflow:hidden; }
+.featured-media img{ width:100%; height:100%; object-fit:cover; position:absolute; inset:0; }
+.featured-media-tint{ position:absolute; inset:0; background:linear-gradient(to top, rgba(14,14,16,.9), rgba(14,14,16,.2)); }
+.featured-media-content{ position:absolute; left:0; right:0; bottom:0; padding:24px; }
+.featured-live-tag{
+  display:inline-flex; align-items:center; gap:7px; background:var(--live); color:#fff;
+  font-family:'JetBrains Mono',monospace; font-size:.6875rem; font-weight:600; padding:5px 10px; border-radius:2px; letter-spacing:.02em;
+  margin-bottom:12px;
+}
+.featured-live-tag .pulse-dot{ background:#fff; width:6px; height:6px; }
+.featured-live-tag .pulse-dot::before{ background:#fff; }
+.featured-teams{ font-family:'Archivo',sans-serif; font-weight:800; font-size:1.5rem; color:#fff; }
+.featured-score{ font-family:'JetBrains Mono',monospace; font-size:1rem; color:rgba(255,255,255,.75); margin-top:6px; }
+
+.featured-info{ padding:32px; display:flex; flex-direction:column; }
+@media (min-width:640px){ .featured-info{ padding:40px; } }
+.featured-info h3{ font-size:1.5rem; }
+.featured-info .sub{ font-family:'JetBrains Mono',monospace; font-size:.875rem; color:var(--ink-dim); margin-top:6px; }
+.featured-stats-row{ display:flex; gap:32px; margin-top:28px; font-family:'JetBrains Mono',monospace; flex-wrap:wrap; }
+.featured-stats-row .num{ font-size:1.5rem; font-weight:700; color:var(--acid); }
+.featured-stats-row .lbl{ font-size:.6875rem; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.03em; margin-top:2px; }
+.featured-info .btn{ margin-top:auto; margin-top:28px; align-self:flex-start; }
+
+.featured-empty{ display:flex; align-items:center; justify-content:center; min-height:220px; padding:40px 24px; }
+.featured-empty-inner{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:10px; max-width:380px; }
+.featured-empty-inner .icon{ color:var(--ink-dim); margin-bottom:6px; }
+.featured-empty-inner h3{ font-size:1.25rem; }
+.featured-empty-inner .sub{ font-family:'Inter',sans-serif; font-size:.9375rem; color:var(--ink-soft); line-height:1.6; margin-bottom:8px; }
+
+/* ============ TOURNAMENT TABS ============ */
+.tabs{ display:flex; gap:8px; margin-bottom:32px; overflow-x:auto; padding-bottom:4px; }
+.tab-btn{
+  flex-shrink:0; font-family:'Archivo',sans-serif; font-weight:700; font-size:.75rem;
+  text-transform:uppercase; letter-spacing:.03em; padding:12px 20px; min-height:48px;
+  border:1px solid var(--line); background:var(--panel); color:var(--ink-soft); transition:background .2s ease,color .2s ease,border-color .2s ease;
+}
+.tab-btn:hover{ border-color:var(--acid); color:var(--ink); }
+.tab-btn[aria-selected="true"]{ background:var(--acid); color:#0E0E10; border-color:var(--acid); }
+
+/* ============ TOURNAMENT GRID ============ */
+.tourney-grid{ display:grid; gap:20px; grid-template-columns:1fr; }
+@media (min-width:640px){ .tourney-grid{ grid-template-columns:1fr 1fr; } }
+@media (min-width:1024px){ .tourney-grid{ grid-template-columns:1fr 1fr 1fr; } }
+
+.tourney-card{
+  position:relative; background:var(--panel); border:1px solid var(--line); overflow:hidden;
+  display:flex; flex-direction:column; transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+.tourney-card:hover, .tourney-card:focus-within{ transform:translateY(-6px); box-shadow:0 20px 44px -14px rgba(0,0,0,.7); border-color:rgba(200,255,61,.35); }
+.charge-line{ position:absolute; top:0; left:0; height:3px; width:0%; background:var(--acid); transition:width .45s cubic-bezier(.65,0,.35,1); z-index:2; box-shadow:0 0 12px rgba(200,255,61,.6); }
+.tourney-card:hover .charge-line, .tourney-card:focus-within .charge-line{ width:100%; }
+
+.tourney-img{ position:relative; height:150px; overflow:hidden; }
+.tourney-img img{ width:100%; height:100%; object-fit:cover; transition:transform .5s cubic-bezier(.25,.8,.25,1); }
+.tourney-card:hover .tourney-img img{ transform:scale(1.06); }
+.tourney-img.grayscale img{ filter:grayscale(1); }
+.tourney-img-tint{ position:absolute; inset:0; background:rgba(14,14,16,.45); }
+.tourney-img-tint.dark{ background:rgba(14,14,16,.6); }
+.tag{ position:absolute; font-family:'JetBrains Mono',monospace; font-size:.6875rem; font-weight:600; padding:5px 10px; border-radius:2px; letter-spacing:.02em; }
+.tag-live{ top:12px; left:12px; background:var(--live); color:#fff; display:flex; align-items:center; gap:6px; }
+.tag-live .pulse-dot{ background:#fff; width:6px; height:6px; }
+.tag-live .pulse-dot::before{ background:#fff; }
+.tag-upcoming{ top:12px; left:12px; background:var(--acid); color:#0E0E10; }
+.tag-concluded{ top:12px; left:12px; background:var(--ink-dim); color:#0E0E10; }
+.tag-mode{ top:12px; right:12px; background:rgba(14,14,16,.82); color:var(--ink); border:1px solid var(--line); }
+
+.tourney-body{ padding:22px; display:flex; flex-direction:column; flex:1; }
+.tourney-body h3{ font-size:1.0625rem; line-height:1.3; color:var(--ink); }
+.tourney-sub{ font-family:'JetBrains Mono',monospace; font-size:.8125rem; color:var(--ink-dim); margin-top:4px; }
+
+.tourney-stats{ display:flex; align-items:center; justify-content:space-between; margin-top:18px; font-family:'JetBrains Mono',monospace; }
+.tourney-stats .num{ font-size:1.1875rem; font-weight:700; color:var(--ink); }
+.tourney-stats .lbl{ font-size:.6875rem; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.03em; }
+.tourney-stats .right{ text-align:right; }
+
+.slot-bar{ height:6px; background:var(--line); border-radius:99px; overflow:hidden; margin-top:12px; }
+.slot-fill{ height:100%; background:var(--acid); border-radius:99px; transition:width .6s ease; }
+
+.empty-state{ display:none; text-align:center; color:var(--ink-dim); font-family:'JetBrains Mono',monospace; padding:64px 0; }
+
+.tourney-grid-empty{ display:block; }
+.grid-empty-state{
+  display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px;
+  background:var(--panel); border:1px dashed var(--line); padding:64px 32px;
+  max-width:480px; margin:0 auto;
+}
+.grid-empty-state .icon{ color:var(--ink-dim); margin-bottom:6px; }
+.grid-empty-state h3{ font-size:1.25rem; }
+.grid-empty-state p{ color:var(--ink-soft); font-size:.9375rem; line-height:1.6; margin-bottom:8px; max-width:360px; }
+.empty-state.is-visible{ display:block; }
+
+/* ============ LEADERBOARD (spotlight + stacked list, not a plain table) ============ */
+.leaderboard-section{ background:var(--bg-soft); border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+.lb-layout{ display:grid; grid-template-columns:1fr; gap:20px; }
+@media (min-width:900px){ .lb-layout{ grid-template-columns:340px 1fr; } }
+
+.spotlight-card{
+  background:linear-gradient(160deg, rgba(200,255,61,.08), var(--panel) 55%);
+  border:1px solid rgba(200,255,61,.25); padding:32px; display:flex; flex-direction:column;
+}
+.spotlight-rank{ font-family:'Archivo',sans-serif; font-weight:900; font-size:3.5rem; color:var(--acid); line-height:1; }
+.spotlight-tag{ font-family:'JetBrains Mono',monospace; font-size:.6875rem; color:var(--acid); text-transform:uppercase; letter-spacing:.06em; margin-top:4px; }
+.spotlight-clan{ display:flex; align-items:center; gap:14px; margin-top:24px; }
+.spotlight-clan img{ width:56px; height:56px; object-fit:cover; border-radius:4px; flex-shrink:0; }
+.spotlight-clan-name{ font-family:'Archivo',sans-serif; font-weight:800; font-size:1.25rem; }
+.spotlight-clan-sub{ font-family:'JetBrains Mono',monospace; font-size:.8125rem; color:var(--ink-dim); margin-top:2px; }
+.spotlight-metrics{ display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:28px; padding-top:24px; border-top:1px solid var(--line); }
+.spotlight-metrics .num{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:1.375rem; color:var(--ink); }
+.spotlight-metrics .lbl{ font-family:'JetBrains Mono',monospace; font-size:.6875rem; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.03em; margin-top:2px; }
+.spotlight-trend{ display:inline-flex; align-items:center; gap:4px; color:var(--win); font-family:'JetBrains Mono',monospace; font-size:.875rem; font-weight:600; margin-top:24px; }
+
+.lb-list{ background:var(--panel); border:1px solid var(--line); display:flex; flex-direction:column; }
+.lb-row{
+  display:grid; grid-template-columns:36px 1fr auto; gap:14px;
+  padding:18px 22px; border-bottom:1px solid var(--line); align-items:center;
+  transition:background .2s ease;
+}
+.lb-row:last-child{ border-bottom:none; }
+.lb-row:hover{ background:var(--panel-soft); }
+.lb-rank{ font-family:'Archivo',sans-serif; font-weight:900; font-size:1rem; color:var(--ink-dim); }
+.lb-rank.tier-2{ color:var(--silver); }
+.lb-rank.tier-3{ color:var(--bronze); }
+.lb-clan{ display:flex; align-items:center; gap:12px; min-width:0; }
+.lb-clan img{ width:36px; height:36px; object-fit:cover; border-radius:2px; flex-shrink:0; }
+.lb-clan-info{ min-width:0; }
+.lb-clan-info .name{ font-family:'Archivo',sans-serif; font-weight:700; font-size:.9375rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--ink); }
+.lb-clan-info .players{ font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--ink-dim); }
+.lb-right{ display:flex; align-items:center; gap:18px; }
+.lb-elo{ text-align:right; font-family:'JetBrains Mono',monospace; font-size:.9375rem; font-weight:700; color:var(--ink); min-width:54px; }
+.lb-trend{ display:none; align-items:center; gap:4px; font-family:'JetBrains Mono',monospace; font-size:.8125rem; font-weight:600; min-width:48px; }
+.lb-trend.up{ color:var(--win); }
+.lb-trend.down{ color:var(--live); }
+@media (min-width:480px){ .lb-trend{ display:flex; } }
+
+.lb-cta{ display:flex; justify-content:center; margin-top:28px; }
+
+.lb-empty-state{
+  display:flex; flex-direction:column; align-items:center; text-align:center; gap:12px;
+  background:var(--panel); border:1px dashed var(--line); padding:64px 32px;
+  max-width:480px; margin:0 auto;
+}
+.lb-empty-state .icon{ color:var(--ink-dim); margin-bottom:6px; }
+.lb-empty-state h3{ font-size:1.25rem; }
+.lb-empty-state p{ color:var(--ink-soft); font-size:.9375rem; line-height:1.6; max-width:360px; }
+
+/* ============ REGISTER STRIP (overlapping form) ============ */
+.register-section{ position:relative; background:var(--panel); border-bottom:1px solid var(--line); padding-top:48px; }
+.register-grid{ display:grid; gap:0; align-items:start; grid-template-columns:1fr; }
+@media (min-width:1024px){ .register-grid{ grid-template-columns:1fr 460px; gap:40px; } }
+.register-copy{ padding-bottom:48px; }
+@media (min-width:1024px){ .register-copy{ padding-top:48px; padding-bottom:80px; } }
+.register-grid .eyebrow{ color:var(--acid); }
+.register-grid h2{ font-size:1.875rem; }
+@media (min-width:640px){ .register-grid h2{ font-size:2.25rem; } }
+.register-grid p{ color:var(--ink-soft); margin-top:16px; max-width:420px; line-height:1.6; }
+
+.form-card{
+  background:var(--bg-soft); color:var(--ink); border:1px solid var(--line); padding:28px;
+  display:flex; flex-direction:column; gap:16px;
+  box-shadow:0 30px 60px -20px rgba(0,0,0,.7);
+}
+@media (min-width:640px){ .form-card{ padding:32px; } }
+@media (min-width:1024px){ .form-card{ transform:translateY(-32px); } }
+.field-label{ display:block; font-family:'JetBrains Mono',monospace; font-size:.6875rem; font-weight:600; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-dim); margin-bottom:6px; }
+.field-input{ width:100%; background:var(--panel); border:1px solid var(--line); border-radius:2px; padding:12px 16px; min-height:48px; outline:none; transition:border-color .2s ease; color:var(--ink); }
+.field-input::placeholder{ color:var(--ink-dim); }
+.field-input:focus{ border-color:var(--acid); }
+textarea.field-input{ resize:none; min-height:auto; }
+.field-row{ display:grid; gap:16px; }
+@media (min-width:480px){ .field-row{ grid-template-columns:1fr 1fr; } }
+.form-note{ font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--ink-dim); }
+
+/* ============ CONTACT (inverse asymmetric: FAQ wide left, methods narrow right) ============ */
+.contact-layout{ display:grid; gap:24px; grid-template-columns:1fr; align-items:start; }
+@media (min-width:1024px){ .contact-layout{ grid-template-columns:1.4fr 1fr; } }
+
+.faq-box{ border:1px solid var(--line); background:var(--panel); padding:28px; }
+@media (min-width:640px){ .faq-box{ padding:36px; } }
+.faq-box h3{ font-size:1.25rem; margin-bottom:20px; }
+.faq-item{ border-top:1px solid var(--line); padding:18px 0; }
+.faq-item:first-child{ border-top:none; padding-top:0; }
+.faq-item summary{ display:flex; align-items:center; justify-content:space-between; cursor:pointer; font-weight:600; list-style:none; min-height:48px; color:var(--ink); gap:16px; }
+.faq-item summary::-webkit-details-marker{ display:none; }
+.faq-item summary .icon{ transition:transform .2s ease; color:var(--ink-dim); flex-shrink:0; }
+.faq-item[open] summary .icon{ transform:rotate(45deg); color:var(--acid); }
+.faq-item p{ color:var(--ink-soft); font-size:.9375rem; margin-top:8px; line-height:1.6; }
+
+.contact-side{ display:flex; flex-direction:column; gap:16px; }
+.contact-card{ border:1px solid var(--line); background:var(--panel); padding:24px; }
+.contact-icon{ width:44px; height:44px; background:var(--acid-soft); color:var(--acid); display:flex; align-items:center; justify-content:center; margin-bottom:16px; }
+.contact-card h3{ font-size:1.0625rem; }
+.contact-card p{ color:var(--ink-soft); font-size:.9375rem; margin-top:8px; line-height:1.6; }
+.contact-link{ display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono',monospace; font-size:.8125rem; font-weight:600; margin-top:14px; color:var(--acid); }
+.contact-link:hover{ text-decoration:underline; }
+
+.support-form{ border:1px solid var(--line); background:var(--panel); padding:28px; display:flex; flex-direction:column; gap:16px; margin-top:40px; }
+@media (min-width:640px){ .support-form{ padding:36px; } }
+.support-form h3{ font-size:1.25rem; margin-bottom:4px; }
+
+/* ============ FOOTER ============ */
+.site-footer{ background:var(--bg-soft); color:#fff; border-top:1px solid var(--line); }
+.footer-grid{ display:grid; gap:40px; grid-template-columns:1fr; padding:56px 0; }
+@media (min-width:640px){ .footer-grid{ grid-template-columns:1fr 1fr; } }
+@media (min-width:1024px){ .footer-grid{ grid-template-columns:1.3fr 1fr 1fr 1fr; padding:56px 0; } }
+.footer-brand{ display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+.footer-brand-mark{ width:36px; height:36px; background:var(--acid); display:flex; align-items:center; justify-content:center; }
+.footer-brand-mark .icon{ stroke:#0E0E10; }
+.footer-brand-name{ font-weight:800; font-size:1.125rem; color:var(--ink); }
+.footer-col p{ color:var(--ink-soft); font-size:.9375rem; line-height:1.6; }
+.footer-col h4{ font-family:'JetBrains Mono',monospace; font-size:.6875rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-dim); margin-bottom:16px; }
+.footer-col ul{ display:flex; flex-direction:column; gap:10px; }
+.footer-col a{ color:var(--ink-soft); font-size:.9375rem; transition:color .2s ease; }
+.footer-col a:hover{ color:var(--acid); }
+.social-row{ display:flex; gap:12px; }
+.social-btn{ width:44px; height:44px; display:flex; align-items:center; justify-content:center; border:1px solid var(--line); transition:background .2s ease, border-color .2s ease; }
+.social-btn:hover{ background:var(--acid-soft); border-color:var(--acid); }
+.social-btn .icon{ stroke:var(--ink); width:18px; height:18px; }
+
+.footer-bottom{ border-top:1px solid var(--line); padding:24px 0; display:flex; flex-direction:column; gap:12px; font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--ink-dim); }
+@media (min-width:640px){ .footer-bottom{ flex-direction:row; justify-content:space-between; } }
+.footer-legal{ display:flex; gap:20px; }
+.footer-legal a:hover{ color:var(--acid); }
+
+@media (prefers-reduced-motion: reduce){
+  *, *::before, *::after{
+    animation-duration:.001ms !important; animation-iteration-count:1 !important;
+    transition-duration:.001ms !important; scroll-behavior:auto !important;
+  }
+}
+
+.pending-toast{
+  position:fixed; left:50%; bottom:28px; transform:translate(-50%,12px);
+  background:var(--panel-soft); color:var(--ink); border:1px solid var(--line);
+  font-family:'JetBrains Mono',monospace; font-size:.8125rem;
+  padding:12px 20px; border-radius:4px; box-shadow:0 12px 32px -8px rgba(0,0,0,.6);
+  opacity:0; pointer-events:none; transition:opacity .25s ease, transform .25s ease;
+  z-index:100; max-width:90vw; text-align:center;
+}
+.pending-toast.is-visible{ opacity:1; transform:translate(-50%,0); }
+</style>
+</head>
+
+<body>
+
+<!-- ============ AUTH GATE ============ -->
+<!-- The entire site is gated. This overlay covers everything until Firebase confirms a signed-in user. -->
+<div id="auth-gate" class="auth-gate">
+  <div class="auth-gate-inner">
+
+    <div id="auth-loading" class="auth-loading">
+      <span class="auth-spinner" aria-hidden="true"></span>
+      <p>Checking your session…</p>
+    </div>
+
+    <form id="auth-form" class="auth-form" style="display:none;" novalidate>
+      <a href="#" class="auth-brand">
+        <span class="brand-mark">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+        </span>
+        <span class="brand-name">HEJTERI</span>
+      </a>
+
+      <div class="auth-tabs" role="tablist" aria-label="Sign in or create account">
+        <button type="button" class="auth-tab" role="tab" aria-selected="true" data-mode="signin">Sign in</button>
+        <button type="button" class="auth-tab" role="tab" aria-selected="false" data-mode="signup">Create account</button>
+      </div>
+
+      <p class="auth-sub">Hejteri is fully gated — sign in to view tournaments, standings, and register your clan.</p>
+
+      <div id="auth-error" class="auth-error" role="alert" style="display:none;"></div>
+
+      <div class="field-row-1">
+        <label for="auth-email" class="field-label">Email</label>
+        <input id="auth-email" type="email" required autocomplete="email" class="field-input" placeholder="you@clan.gg" />
+      </div>
+      <div class="field-row-1">
+        <label for="auth-password" class="field-label">Password</label>
+        <input id="auth-password" type="password" required autocomplete="current-password" minlength="6" class="field-input" placeholder="••••••••" />
+      </div>
+
+      <button type="submit" id="auth-submit" class="btn btn-primary" style="width:100%;">Sign in</button>
+
+      <div class="auth-divider"><span>or</span></div>
+
+      <button type="button" id="auth-discord" class="btn btn-outline auth-discord-btn" style="width:100%;">
+        <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M7.5 7.2C9 6.4 10.5 6 12 6s3 .4 4.5 1.2"/><path d="M5 17c-1-3 0-7 1.5-9.5"/><path d="M19 17c1-3 0-7-1.5-9.5"/><path d="M7 16.5c2.5 1.5 7.5 1.5 10 0"/></svg>
+        Continue with Discord
+      </button>
+
+      <p class="auth-footnote">By continuing you agree to Hejteri's tournament rules and conduct policy.</p>
+    </form>
+
+  </div>
+</div>
+
+<!-- The whole existing site is wrapped here. It only becomes visible after a successful sign-in. -->
+<div id="app-root" class="app-root-hidden">
+
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<!-- ============ HEADER / NAV ============ -->
+<header class="site-header">
+  <nav class="wrap nav" aria-label="Primary">
+    <a href="#home" class="brand">
+      <span class="brand-mark">
+        <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+      </span>
+      <span class="brand-name">HEJTERI</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="#home" class="nav-link">Home</a>
+      <a href="#tournaments" class="nav-link">Tournaments</a>
+      <a href="#leaderboard" class="nav-link">Leaderboard</a>
+      <a href="#contact" class="nav-link">Contact</a>
+      <a href="#admin" id="nav-admin-link" class="nav-link" style="display:none;">Admin</a>
+      <a href="#tournaments" class="nav-live"><span class="pulse-dot"></span>Live now</a>
+    </div>
+
+    <div class="nav-actions">
+      <div id="auth-userbar" class="auth-userbar">
+        <span class="avatar" id="user-avatar">?</span>
+        <span id="user-email-display">—</span>
+        <button type="button" id="sign-out-btn" class="auth-signout">Sign out</button>
+      </div>
+      <a href="#register" class="btn btn-primary">Register clan</a>
+    </div>
+
+    <button class="menu-toggle" id="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-menu">
+      <svg class="icon" id="icon-menu" viewBox="0 0 24 24" aria-hidden="true"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+      <svg class="icon" id="icon-close" viewBox="0 0 24 24" aria-hidden="true" style="display:none;"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+    </button>
+  </nav>
+
+  <div class="mobile-menu" id="mobile-menu" role="menu">
+    <a href="#home" role="menuitem">Home</a>
+    <a href="#tournaments" role="menuitem">Tournaments</a>
+    <a href="#leaderboard" role="menuitem">Leaderboard</a>
+    <a href="#contact" role="menuitem">Contact</a>
+    <a href="#admin" id="nav-admin-link-mobile" role="menuitem" style="display:none;">Admin</a>
+    <div class="mobile-divider"></div>
+    <button type="button" id="sign-out-btn-mobile" role="menuitem" style="text-align:left; background:none; border:none; width:100%;">Sign out</button>
+    <a href="#register" class="btn btn-primary mobile-cta" role="menuitem">Register clan</a>
+  </div>
+</header>
+
+<main id="main-content">
+
+  <!-- ============ HERO (asymmetric layout + live strip) ============ -->
+  <section id="home" class="hero">
+    <div class="hero-fallback" id="hero-fallback" aria-hidden="true"></div>
+    <canvas id="hero-canvas" aria-hidden="true"></canvas>
+    <div class="hero-noise" aria-hidden="true"></div>
+    <div class="hero-glow" aria-hidden="true"></div>
+    <div class="hero-shell">
+      <div class="hero-main">
+        <div class="hero-copy">
+          <div class="badge"><span class="pulse-dot"></span>SEASON 7 REGISTRATION OPEN</div>
+
+          <h1>PLAY LIKE IT'S<br><span class="accent-word">MATCH POINT.</span></h1>
+
+          <p class="lede">Hejteri runs the bracket for Standoff 2's most contested tournaments. Real prize pools, verified clans, and a leaderboard that never lies.</p>
+
+          <div class="hero-ctas">
+            <a href="#register" class="btn btn-primary">
+              Register your clan
+              <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </a>
+            <a href="#tournaments" class="btn btn-outline">View brackets</a>
+          </div>
+
+          <div class="hero-stats">
+            <div>
+              <p class="stat-num">$48,200</p>
+              <p class="stat-label">Active prize pool</p>
+            </div>
+            <div class="stat-divider"></div>
+            <div>
+              <p class="stat-num">1,140</p>
+              <p class="stat-label">Clans competing</p>
+            </div>
+            <div class="stat-divider"></div>
+            <div>
+              <p class="stat-num">412</p>
+              <p class="stat-label">Tournaments run</p>
+            </div>
+          </div>
+        </div>
+
+        <aside class="hero-live-strip" aria-label="Live matches">
+          <p class="live-strip-label"><span class="pulse-dot"></span>Live right now</p>
+
+          <div class="live-empty">
+            <svg class="icon icon-lg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+            <p class="live-empty-title">No live matches</p>
+            <p class="live-empty-sub">Check back during scheduled brackets, or browse what's coming up.</p>
+          </div>
+
+          <a href="#tournaments" class="btn btn-outline live-strip-cta">View tournaments</a>
+        </aside>
+      </div>
+    </div>
+
+    <div class="ticker-wrap ticker-empty">
+      <div class="ticker-empty-inner">
+        <span class="pulse-dot-static"></span>
+        <span class="font-mono">Live results, rank changes, and prize pool updates will appear here once tournaments go live.</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ NAV TILES (clickable section menu) ============ -->
+  <section id="explore" class="nav-tiles-section">
+    <div class="wrap section-tight">
+      <div class="nav-tiles-head">
+        <p class="eyebrow">Explore Hejteri</p>
+        <h2>Where do you want to go?</h2>
+      </div>
+
+      <div class="nav-tiles-grid">
+        <a href="#tournaments" class="nav-tile">
+          <span class="nav-tile-charge" aria-hidden="true"></span>
+          <span class="nav-tile-tag open">Open</span>
+          <span class="nav-tile-icon">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h4v6H4zM16 4h4v6h-4zM10 14h4v6h-4z"/><path d="M6 10v2a6 6 0 006 6 6 6 0 006-6v-2"/></svg>
+          </span>
+          <span class="nav-tile-body">
+            <h3>Tournaments</h3>
+            <p>Browse active, upcoming, and past brackets across every format.</p>
+          </span>
+          <span class="nav-tile-arrow">View brackets<svg class="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+        </a>
+
+        <a href="#leaderboard" class="nav-tile">
+          <span class="nav-tile-charge" aria-hidden="true"></span>
+          <span class="nav-tile-icon">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg>
+          </span>
+          <span class="nav-tile-body">
+            <h3>Leaderboard</h3>
+            <p>See ranked clan standings and ELO once Season 7 matches begin.</p>
+          </span>
+          <span class="nav-tile-arrow">View rankings<svg class="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+        </a>
+
+        <a href="#register" class="nav-tile">
+          <span class="nav-tile-charge" aria-hidden="true"></span>
+          <span class="nav-tile-tag live">Season 7</span>
+          <span class="nav-tile-icon">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+          </span>
+          <span class="nav-tile-body">
+            <h3>Register Your Clan</h3>
+            <p>Submit your five-stack and lock your slot before qualifiers close.</p>
+          </span>
+          <span class="nav-tile-arrow">Get started<svg class="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+        </a>
+
+        <a href="#contact" class="nav-tile">
+          <span class="nav-tile-charge" aria-hidden="true"></span>
+          <span class="nav-tile-icon">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 11.5a8.5 8.5 0 01-12.3 7.6L4 20l1.1-4.5A8.5 8.5 0 1121 11.5z"/></svg>
+          </span>
+          <span class="nav-tile-body">
+            <h3>Contact &amp; Support</h3>
+            <p>Match disputes, sponsorship inquiries, and general help.</p>
+          </span>
+          <span class="nav-tile-arrow">Get in touch<svg class="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TOURNAMENTS (featured split-panel + grid) ============ -->
+  <section id="tournaments" class="wrap section page-section">
+    <div class="page-section-head-row">
+      <a href="#explore" class="page-section-back"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Back to menu</a>
+    </div>
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">The bracket</p>
+        <h2>Tournaments</h2>
+      </div>
+      <p class="desc">Every bracket on Hejteri is admin-verified and casted. Pick a slot before it's gone.</p>
+    </div>
+
+    <!-- Featured live match panel — populated by JS from Firestore if a live tournament exists -->
+    <article id="featured-match-panel" class="featured-match featured-empty">
+      <div class="featured-empty-inner">
+        <svg class="icon icon-lg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+        <h3>No live match in progress</h3>
+        <p class="sub">The featured panel activates automatically once a bracket match goes live. Browse upcoming slots below.</p>
+        <a href="#tournament-grid" class="btn btn-outline">See upcoming tournaments</a>
+      </div>
+    </article>
+
+
+    <div class="tabs" role="tablist" aria-label="Filter tournaments by status">
+      <button class="tab-btn" role="tab" aria-selected="true" data-filter="all">All</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-filter="live">Live</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-filter="upcoming">Upcoming</button>
+      <button class="tab-btn" role="tab" aria-selected="false" data-filter="past">Past</button>
+    </div>
+
+    <!-- Tournament cards populate this grid once brackets are created in the backend -->
+    <div id="tournament-grid" class="tourney-grid tourney-grid-empty">
+      <div class="grid-empty-state">
+        <svg class="icon icon-lg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        <h3>No tournaments scheduled yet</h3>
+        <p>Season 7 brackets are still being finalized. Register your clan now to get notified the moment slots open.</p>
+        <a href="#register" class="btn btn-primary">Register your clan</a>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ============ LEADERBOARD (spotlight + stacked list) ============ -->
+  <section id="leaderboard" class="leaderboard-section page-section">
+    <div class="wrap section">
+      <div class="page-section-head-row">
+        <a href="#explore" class="page-section-back"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Back to menu</a>
+      </div>
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Standings</p>
+          <h2>Clan Leaderboard</h2>
+        </div>
+        <p class="desc">ELO is recalculated after every sanctioned match. No exhibition games count.</p>
+      </div>
+
+
+      <!-- Leaderboard rendered by JS from Firestore. Falls back to this empty state. -->
+      <div id="leaderboard-container">
+        <div class="lb-empty-state">
+          <svg class="icon icon-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg>
+          <h3>Rankings haven't launched yet</h3>
+          <p>Once Season 7 matches are reported, clan ELO and standings will appear here automatically.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+
+  <!-- ============ REGISTER CTA (overlapping card) ============ -->
+  <section id="register" class="register-section page-section">
+    <div class="wrap" style="padding-top:18px;">
+      <div class="page-section-head-row" style="border-bottom:none; padding-bottom:0;">
+        <a href="#explore" class="page-section-back"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Back to menu</a>
+      </div>
+    </div>
+    <div class="wrap register-grid">
+      <div class="register-copy">
+        <p class="eyebrow">Round 01 — Register</p>
+        <h2>Get your roster on the bracket.</h2>
+        <p>Submit your five-stack, verify your IDs, and lock your slot before qualifiers close. Takes under four minutes.</p>
+      </div>
+      <form id="clan-register-form" class="form-card clip-card" aria-label="Clan registration">
+        <div id="register-status" class="auth-error" role="alert" style="display:none;"></div>
+        <div>
+          <label for="clan-name" class="field-label">Clan name</label>
+          <input id="clan-name" type="text" required placeholder="e.g. Nullpoint" class="field-input" />
+        </div>
+        <div class="field-row">
+          <div>
+            <label for="captain-tag" class="field-label">Captain ID</label>
+            <input id="captain-tag" type="text" required placeholder="Standoff 2 UID" class="field-input" />
+          </div>
+          <div>
+            <label for="contact-email" class="field-label">Contact email</label>
+            <input id="contact-email" type="email" required placeholder="you@clan.gg" class="field-input" />
+          </div>
+        </div>
+        <button type="submit" id="register-submit-btn" class="btn btn-primary" style="width:100%;">Submit roster</button>
+        <p class="form-note">No payment required for qualifier rounds.</p>
+      </form>
+    </div>
+  </section>
+
+  <!-- ============ CONTACT (FAQ wide left / methods narrow right) ============ -->
+  <section id="contact" class="wrap section page-section">
+    <div class="page-section-head-row">
+      <a href="#explore" class="page-section-back"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Back to menu</a>
+    </div>
+    <div style="margin-bottom:40px;">
+      <p class="eyebrow">Get in touch</p>
+      <h2 style="font-size:2.25rem;">Contact &amp; Support</h2>
+      <p style="color:var(--ink-soft); margin-top:16px; max-width:520px;">Sponsorship inquiries, match disputes, or anti-cheat reports — pick the right channel and we'll route it to the right desk.</p>
+    </div>
+
+    <div class="contact-layout">
+      <div class="faq-box">
+        <h3>Frequently asked</h3>
+        <details class="faq-item">
+          <summary>How fast are match disputes resolved?<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></summary>
+          <p>Admins review submitted footage within 24 hours. Verdicts are posted to both teams and the bracket is updated automatically.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Is there an entry fee for tournaments?<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></summary>
+          <p>Qualifier rounds are free. Some Championship-tier brackets carry a buy-in, which is always shown on the tournament card before you register.</p>
+        </details>
+        <details class="faq-item">
+          <summary>How is ELO calculated?<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></summary>
+          <p>We use a modified Elo system weighted by round differential and opponent strength. Only sanctioned matches count toward your rating.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Can I transfer my slot to another clan?<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></summary>
+          <p>Slot transfers are allowed up to 48 hours before the bracket locks. Contact support with both clan tags to request one.</p>
+        </details>
+
+        <form class="support-form" aria-label="Support request form">
+          <h3>Send a message</h3>
+          <div class="field-row">
+            <div>
+              <label for="full-name" class="field-label">Name</label>
+              <input id="full-name" type="text" required class="field-input" />
+            </div>
+            <div>
+              <label for="email" class="field-label">Email</label>
+              <input id="email" type="email" required class="field-input" />
+            </div>
+          </div>
+          <div>
+            <label for="topic" class="field-label">Topic</label>
+            <select id="topic" class="field-input">
+              <option>Match dispute</option>
+              <option>Sponsorship</option>
+              <option>Registration issue</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div>
+            <label for="message" class="field-label">Message</label>
+            <textarea id="message" rows="4" required class="field-input"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">Send message</button>
+        </form>
+      </div>
+
+      <div class="contact-side">
+        <div class="contact-card">
+          <div class="contact-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12" y2="16.01"/></svg></div>
+          <h3>Match Disputes</h3>
+          <p>Report a scoring error, suspected cheating, or a no-show within 24 hours of your match ending.</p>
+          <a href="mailto:disputes@hejteri.gg" class="contact-link">disputes@hejteri.gg<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
+        </div>
+        <div class="contact-card">
+          <div class="contact-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M11 17H4a2 2 0 0 1-2-2v-1a4 4 0 0 1 4-4h1"/><path d="M13 7h7a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4h-1"/><path d="M8 5l4 4-4 4"/><path d="M16 19l-4-4 4-4"/></svg></div>
+          <h3>Sponsorship</h3>
+          <p>Brand placements, prize pool backing, and co-branded tournaments. Median response time: 2 business days.</p>
+          <a href="mailto:partners@hejteri.gg" class="contact-link">partners@hejteri.gg<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
+        </div>
+        <div class="contact-card">
+          <div class="contact-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="14.83" y1="9.17" x2="18.36" y2="5.64"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/></svg></div>
+          <h3>General Support</h3>
+          <p>Account access, registration issues, or anything that doesn't fit the categories above.</p>
+          <a href="mailto:support@hejteri.gg" class="contact-link">support@hejteri.gg<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ADMIN PANEL (visible only when role === 'admin', controlled by JS) ============ -->
+  <section id="admin" class="wrap section page-section" style="display:none;">
+    <div class="page-section-head-row">
+      <a href="#explore" class="page-section-back"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Back to menu</a>
+    </div>
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Admin</p>
+        <h2>Manage Tournaments &amp; Rankings</h2>
+      </div>
+      <p class="desc">Visible only to admin accounts. Changes write directly to Firestore and appear live on the site.</p>
+    </div>
+
+    <div class="contact-layout">
+      <div class="faq-box">
+        <h3>Create a tournament</h3>
+        <div id="admin-tournament-status" class="auth-error" role="alert" style="display:none; margin-bottom:16px;"></div>
+        <form id="admin-tournament-form" style="display:flex; flex-direction:column; gap:16px;">
+          <div class="field-row-1">
+            <label for="t-name" class="field-label">Tournament name</label>
+            <input id="t-name" type="text" required class="field-input" placeholder="e.g. Hejteri Open — Season 7" />
+          </div>
+          <div class="field-row">
+            <div>
+              <label for="t-mode" class="field-label">Mode</label>
+              <input id="t-mode" type="text" required class="field-input" placeholder="5v5 Defuse" />
+            </div>
+            <div>
+              <label for="t-format" class="field-label">Format</label>
+              <input id="t-format" type="text" required class="field-input" placeholder="Single Elimination · Bo5" />
+            </div>
+          </div>
+          <div class="field-row">
+            <div>
+              <label for="t-prize" class="field-label">Prize pool ($)</label>
+              <input id="t-prize" type="number" min="0" required class="field-input" placeholder="12000" />
+            </div>
+            <div>
+              <label for="t-slots" class="field-label">Total slots</label>
+              <input id="t-slots" type="number" min="1" required class="field-input" placeholder="32" />
+            </div>
+          </div>
+          <div class="field-row-1">
+            <label for="t-status" class="field-label">Status</label>
+            <select id="t-status" class="field-input">
+              <option value="upcoming">Upcoming</option>
+              <option value="live">Live</option>
+              <option value="past">Past / concluded</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">Create tournament</button>
+        </form>
+
+        <h3 style="margin-top:36px;">Update leaderboard entry</h3>
+        <div id="admin-lb-status" class="auth-error" role="alert" style="display:none; margin-bottom:16px;"></div>
+        <form id="admin-leaderboard-form" style="display:flex; flex-direction:column; gap:16px;">
+          <div class="field-row-1">
+            <label for="lb-clan" class="field-label">Clan name</label>
+            <input id="lb-clan" type="text" required class="field-input" placeholder="e.g. Nullpoint" />
+          </div>
+          <div class="field-row">
+            <div>
+              <label for="lb-elo" class="field-label">ELO rating</label>
+              <input id="lb-elo" type="number" required class="field-input" placeholder="2418" />
+            </div>
+            <div>
+              <label for="lb-wl" class="field-label">Win — Loss</label>
+              <input id="lb-wl" type="text" required class="field-input" placeholder="58–9" />
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width:100%;">Save ranking</button>
+        </form>
+      </div>
+
+      <div class="contact-side">
+        <div class="contact-card">
+          <div class="contact-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div>
+          <h3>Pending clan registrations</h3>
+          <p id="admin-pending-count">Loading…</p>
+        </div>
+        <div id="admin-pending-list" style="display:flex; flex-direction:column; gap:12px;"></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="site-footer">
+  <div class="wrap footer-grid">
+    <div class="footer-col">
+      <a href="#home" class="footer-brand">
+        <span class="footer-brand-mark"><svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><line x1="12" y1="3" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="21"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="21" y2="12"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></span>
+        <span class="footer-brand-name">HEJTERI</span>
+      </a>
+      <p>The competitive bracket for Standoff 2. Run by players, casted for players.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Platform</h4>
+      <ul>
+        <li><a href="#tournaments">Tournaments</a></li>
+        <li><a href="#leaderboard">Leaderboard</a></li>
+        <li><a href="#register">Register a clan</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Support</h4>
+      <ul>
+        <li><a href="#contact">Match disputes</a></li>
+        <li><a href="#contact">Sponsorship</a></li>
+        <li><a href="#contact">Rules &amp; conduct</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Follow the bracket</h4>
+      <div class="social-row">
+        <a href="https://discord.gg/REPLACE_WITH_INVITE" aria-label="Hejteri on Discord" class="social-btn" data-pending="true"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/><path d="M7.5 7.2C9 6.4 10.5 6 12 6s3 .4 4.5 1.2"/><path d="M5 17c-1-3 0-7 1.5-9.5"/><path d="M19 17c1-3 0-7-1.5-9.5"/><path d="M7 16.5c2.5 1.5 7.5 1.5 10 0"/></svg></a>
+        <a href="https://youtube.com/@REPLACE_WITH_HANDLE" aria-label="Hejteri on YouTube" class="social-btn" data-pending="true"><svg class="icon icon-sm" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M10.5 9.5l4 2.5-4 2.5z" fill="currentColor" stroke="none"/></svg></a>
+        <a href="https://x.com/REPLACE_WITH_HANDLE" aria-label="Hejteri on X" class="social-btn" data-pending="true"><svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg></a>
+      </div>
+    </div>
+  </div>
+  <div class="wrap footer-bottom">
+    <p>© 2026 Hejteri. Independent tournament platform — not affiliated with Axlebolt.</p>
+    <div class="footer-legal">
+      <a href="/privacy" data-pending="true">Privacy</a>
+      <a href="/terms" data-pending="true">Terms</a>
+      <a href="/rulebook" data-pending="true">Rulebook</a>
+    </div>
+  </div>
+</footer>
+
+<script type="module">
+  // ============ FIREBASE INIT (SDK v12, modular) ============
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+  import { getAnalytics, isSupported as analyticsSupported } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-analytics.js";
+  import {
+    getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+    signOut, OAuthProvider, signInWithPopup
+  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+  import {
+    getFirestore, doc, getDoc, setDoc, addDoc, collection, query, where, orderBy,
+    onSnapshot, serverTimestamp, limit
+  } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyC3E4SWmN4s0M2YdQFhB1rqNqZN2Zk54sg",
+    authDomain: "turnirigg.firebaseapp.com",
+    projectId: "turnirigg",
+    storageBucket: "turnirigg.firebasestorage.app",
+    messagingSenderId: "961143806185",
+    appId: "1:961143806185:web:edc771289b4c710ac57878",
+    measurementId: "G-QXXF2ZJZZX"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  analyticsSupported().then((ok) => { if (ok) getAnalytics(app); }).catch(() => {});
+
+  // ---- DOM refs (auth gate) ----
+  const authGate = document.getElementById('auth-gate');
+  const appRoot = document.getElementById('app-root');
+  const authLoading = document.getElementById('auth-loading');
+  const authForm = document.getElementById('auth-form');
+  const authError = document.getElementById('auth-error');
+  const authEmailInput = document.getElementById('auth-email');
+  const authPasswordInput = document.getElementById('auth-password');
+  const authSubmitBtn = document.getElementById('auth-submit');
+  const authDiscordBtn = document.getElementById('auth-discord');
+  const authTabs = document.querySelectorAll('.auth-tab');
+
+  let authMode = 'signin';
+
+  function showAuthError(message){
+    authError.textContent = message;
+    authError.style.display = 'block';
+  }
+  function clearAuthError(){
+    authError.style.display = 'none';
+    authError.textContent = '';
+  }
+
+  authTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      authTabs.forEach((t) => t.setAttribute('aria-selected', 'false'));
+      tab.setAttribute('aria-selected', 'true');
+      authMode = tab.getAttribute('data-mode');
+      authSubmitBtn.textContent = authMode === 'signup' ? 'Create account' : 'Sign in';
+      authPasswordInput.setAttribute('autocomplete', authMode === 'signup' ? 'new-password' : 'current-password');
+      clearAuthError();
+    });
+  });
+
+  function friendlyAuthError(err){
+    var code = err && err.code ? err.code : '';
+    if (code.indexOf('wrong-password') !== -1 || code.indexOf('invalid-credential') !== -1) return 'Incorrect email or password.';
+    if (code.indexOf('user-not-found') !== -1) return 'No account found with that email.';
+    if (code.indexOf('email-already-in-use') !== -1) return 'An account already exists with that email. Try signing in instead.';
+    if (code.indexOf('weak-password') !== -1) return 'Password should be at least 6 characters.';
+    if (code.indexOf('invalid-email') !== -1) return 'That email address looks invalid.';
+    if (code.indexOf('popup-closed-by-user') !== -1) return 'Discord sign-in was closed before completing.';
+    if (code.indexOf('account-exists-with-different-credential') !== -1) return 'An account already exists with this email using a different sign-in method.';
+    return 'Something went wrong. Please try again.';
+  }
+
+  authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearAuthError();
+    var email = authEmailInput.value.trim();
+    var password = authPasswordInput.value;
+    if (!email || !password) return;
+
+    authSubmitBtn.disabled = true;
+    var originalLabel = authSubmitBtn.textContent;
+    authSubmitBtn.textContent = authMode === 'signup' ? 'Creating account…' : 'Signing in…';
+
+    try {
+      if (authMode === 'signup') {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await ensureUserDoc(cred.user);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+      // onAuthStateChanged below handles revealing the app
+    } catch (err) {
+      showAuthError(friendlyAuthError(err));
+    } finally {
+      authSubmitBtn.disabled = false;
+      authSubmitBtn.textContent = originalLabel;
+    }
+  });
+
+  // Discord sign-in via a generic OAuth/OIDC provider.
+  // REQUIRES SETUP IN FIREBASE CONSOLE: Authentication → Sign-in method → Add new provider → OpenID Connect,
+  // registered as a Discord OAuth2 application (https://discord.com/developers/applications).
+  // The provider ID below ("oidc.discord") must match exactly what you name it in the Firebase console.
+  authDiscordBtn.addEventListener('click', async () => {
+    clearAuthError();
+    try {
+      const provider = new OAuthProvider('oidc.discord');
+      const cred = await signInWithPopup(auth, provider);
+      await ensureUserDoc(cred.user);
+    } catch (err) {
+      showAuthError(friendlyAuthError(err));
+    }
+  });
+
+  async function ensureUserDoc(user){
+    const userRef = doc(db, 'users', user.uid);
+    const snap = await getDoc(userRef);
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        email: user.email || '',
+        displayName: user.displayName || (user.email ? user.email.split('@')[0] : 'Captain'),
+        role: 'captain',
+        createdAt: serverTimestamp()
+      });
+    }
+  }
+
+  // ---- Sign out ----
+  function wireSignOut(btnId){
+    var btn = document.getElementById(btnId);
+    if (btn) btn.addEventListener('click', () => signOut(auth));
+  }
+  wireSignOut('sign-out-btn');
+  wireSignOut('sign-out-btn-mobile');
+
+  // ---- Auth state: gate the entire site ----
+  let currentUserRole = 'captain';
+  let unsubscribeTournaments = null;
+  let unsubscribeLeaderboard = null;
+  let unsubscribePending = null;
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      await ensureUserDoc(user);
+
+      // Fetch role to decide whether to show the admin nav/section
+      try {
+        const userSnap = await getDoc(doc(db, 'users', user.uid));
+        currentUserRole = (userSnap.exists() && userSnap.data().role) || 'captain';
+      } catch (e) {
+        currentUserRole = 'captain';
+      }
+
+      authGate.classList.add('is-hidden');
+      appRoot.classList.remove('app-root-hidden');
+
+      populateUserBar(user);
+      toggleAdminUI(currentUserRole === 'admin');
+      startLiveListeners();
+    } else {
+      stopLiveListeners();
+      authGate.classList.remove('is-hidden');
+      appRoot.classList.add('app-root-hidden');
+      authLoading.style.display = 'none';
+      authForm.style.display = 'flex';
+      authForm.reset();
+      clearAuthError();
+    }
+  });
+
+  function populateUserBar(user){
+    var email = user.email || user.displayName || 'Signed in';
+    var initial = (user.displayName || user.email || '?').trim().charAt(0).toUpperCase();
+    var avatarEl = document.getElementById('user-avatar');
+    var emailEl = document.getElementById('user-email-display');
+    if (avatarEl) avatarEl.textContent = initial || '?';
+    if (emailEl) emailEl.textContent = email;
+  }
+
+  function toggleAdminUI(isAdmin){
+    var adminSection = document.getElementById('admin');
+    var adminNavLink = document.getElementById('nav-admin-link');
+    var adminNavLinkMobile = document.getElementById('nav-admin-link-mobile');
+    if (adminSection) adminSection.style.display = isAdmin ? '' : 'none';
+    if (adminNavLink) adminNavLink.style.display = isAdmin ? '' : 'none';
+    if (adminNavLinkMobile) adminNavLinkMobile.style.display = isAdmin ? '' : 'none';
+    if (isAdmin) loadPendingClans();
+  }
+
+  // ============ FIRESTORE: LIVE DATA ============
+
+  function startLiveListeners(){
+    // Tournaments — read access requires sign-in (see security rules)
+    const tournamentsQuery = query(collection(db, 'tournaments'), orderBy('createdAt', 'desc'), limit(30));
+    unsubscribeTournaments = onSnapshot(tournamentsQuery, (snapshot) => {
+      const tournaments = [];
+      snapshot.forEach((docSnap) => tournaments.push({ id: docSnap.id, ...docSnap.data() }));
+      renderTournaments(tournaments);
+    }, (err) => {
+      console.warn('Tournaments listener error:', err);
+    });
+
+    // Leaderboard, ordered by ELO descending
+    const leaderboardQuery = query(collection(db, 'leaderboard'), orderBy('elo', 'desc'), limit(20));
+    unsubscribeLeaderboard = onSnapshot(leaderboardQuery, (snapshot) => {
+      const entries = [];
+      snapshot.forEach((docSnap) => entries.push({ id: docSnap.id, ...docSnap.data() }));
+      renderLeaderboard(entries);
+    }, (err) => {
+      console.warn('Leaderboard listener error:', err);
+    });
+  }
+
+  function stopLiveListeners(){
+    if (unsubscribeTournaments) { unsubscribeTournaments(); unsubscribeTournaments = null; }
+    if (unsubscribeLeaderboard) { unsubscribeLeaderboard(); unsubscribeLeaderboard = null; }
+    if (unsubscribePending) { unsubscribePending(); unsubscribePending = null; }
+  }
+
+  function escapeHtml(str){
+    return String(str == null ? '' : str).replace(/[&<>"']/g, function(c){
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+    });
+  }
+
+  function renderTournaments(tournaments){
+    const grid = document.getElementById('tournament-grid');
+    const featuredPanel = document.getElementById('featured-match-panel');
+    if (!grid) return;
+
+    if (tournaments.length === 0) {
+      grid.classList.add('tourney-grid-empty');
+      grid.innerHTML = '<div class="grid-empty-state">' +
+        '<svg class="icon icon-lg" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>' +
+        '<h3>No tournaments scheduled yet</h3>' +
+        '<p>Season 7 brackets are still being finalized. Register your clan now to get notified the moment slots open.</p>' +
+        '<a href="#register" class="btn btn-primary">Register your clan</a>' +
+        '</div>';
+    } else {
+      grid.classList.remove('tourney-grid-empty');
+      grid.innerHTML = tournaments.map(renderTournamentCard).join('');
+    }
+
+    const live = tournaments.find((t) => t.status === 'live');
+    if (featuredPanel) {
+      if (live) {
+        featuredPanel.classList.remove('featured-empty');
+        featuredPanel.innerHTML =
+          '<div class="featured-media">' +
+            '<div class="featured-media-tint"></div>' +
+            '<div class="featured-media-content">' +
+              '<span class="featured-live-tag"><span class="pulse-dot"></span>LIVE</span>' +
+              '<p class="featured-teams">' + escapeHtml(live.name) + '</p>' +
+              '<p class="featured-score">' + escapeHtml(live.format || '') + '</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="featured-info">' +
+            '<h3>' + escapeHtml(live.name) + '</h3>' +
+            '<p class="sub">' + escapeHtml(live.format || '') + ' · ' + escapeHtml(live.mode || '') + '</p>' +
+            '<div class="featured-stats-row">' +
+              '<div><p class="num">$' + Number(live.prizePool || 0).toLocaleString() + '</p><p class="lbl">Prize pool</p></div>' +
+              '<div><p class="num">' + (live.slotsFilled || 0) + '/' + (live.slotsTotal || 0) + '</p><p class="lbl">Slots filled</p></div>' +
+            '</div>' +
+          '</div>';
+      } else {
+        featuredPanel.classList.add('featured-empty');
+        featuredPanel.innerHTML =
+          '<div class="featured-empty-inner">' +
+            '<svg class="icon icon-lg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>' +
+            '<h3>No live match in progress</h3>' +
+            '<p class="sub">The featured panel activates automatically once a bracket match goes live. Browse upcoming slots below.</p>' +
+            '<a href="#tournament-grid" class="btn btn-outline">See upcoming tournaments</a>' +
+          '</div>';
+      }
+    }
+  }
+
+  function renderTournamentCard(t){
+    var statusTagClass = t.status === 'live' ? 'tag-live' : (t.status === 'past' ? 'tag-concluded' : 'tag-upcoming');
+    var statusLabel = t.status === 'live' ? 'LIVE' : (t.status === 'past' ? 'CONCLUDED' : 'UPCOMING');
+    var pct = t.slotsTotal ? Math.min(100, Math.round(((t.slotsFilled || 0) / t.slotsTotal) * 100)) : 0;
+    return '<article class="tourney-card clip-card" data-status="' + escapeHtml(t.status || 'upcoming') + '">' +
+      '<div class="charge-line" aria-hidden="true"></div>' +
+      '<div class="tourney-img ' + (t.status === 'past' ? 'grayscale' : '') + '">' +
+        '<div class="tourney-img-tint ' + (t.status === 'past' ? 'dark' : '') + '" style="position:absolute; inset:0; background:var(--panel-soft);"></div>' +
+        '<span class="tag ' + statusTagClass + '"><span class="pulse-dot" style="' + (t.status !== 'live' ? 'display:none;' : '') + '"></span>' + statusLabel + '</span>' +
+        '<span class="tag tag-mode">' + escapeHtml(t.mode || '') + '</span>' +
+      '</div>' +
+      '<div class="tourney-body">' +
+        '<h3>' + escapeHtml(t.name) + '</h3>' +
+        '<p class="tourney-sub">' + escapeHtml(t.format || '') + '</p>' +
+        '<div class="tourney-stats">' +
+          '<div><p class="num">$' + Number(t.prizePool || 0).toLocaleString() + '</p><p class="lbl">Prize pool</p></div>' +
+          '<div class="right"><p class="num">' + (t.slotsFilled || 0) + '/' + (t.slotsTotal || 0) + '</p><p class="lbl">Slots filled</p></div>' +
+        '</div>' +
+        '<div class="slot-bar"><div class="slot-fill" style="width:' + pct + '%"></div></div>' +
+        '<a href="#register" class="btn btn-primary" style="margin-top:22px;">' + (t.status === 'past' ? 'View results' : 'Join tournament') + '</a>' +
+      '</div>' +
+    '</article>';
+  }
+
+  function renderLeaderboard(entries){
+    const container = document.getElementById('leaderboard-container');
+    if (!container) return;
+
+    if (entries.length === 0) {
+      container.innerHTML = '<div class="lb-empty-state">' +
+        '<svg class="icon icon-lg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17l-5.5 4L8 13.5 3 9l6.5-.5z"/></svg>' +
+        '<h3>Rankings haven\'t launched yet</h3>' +
+        '<p>Once Season 7 matches are reported, clan ELO and standings will appear here automatically.</p>' +
+        '</div>';
+      return;
+    }
+
+    var top = entries[0];
+    var rest = entries.slice(1);
+
+    var html = '<div class="lb-layout">';
+    html += '<div class="spotlight-card clip-card">' +
+      '<p class="spotlight-rank">01</p>' +
+      '<p class="spotlight-tag">Rank 1 · Season leader</p>' +
+      '<div class="spotlight-clan">' +
+        '<div><p class="spotlight-clan-name">' + escapeHtml(top.clanName) + '</p></div>' +
+      '</div>' +
+      '<div class="spotlight-metrics">' +
+        '<div><p class="num">' + (top.elo || 0) + '</p><p class="lbl">ELO rating</p></div>' +
+        '<div><p class="num">' + escapeHtml(top.wl || '—') + '</p><p class="lbl">Win / loss</p></div>' +
+      '</div>' +
+    '</div>';
+
+    html += '<div class="lb-list">';
+    rest.forEach(function(entry, idx){
+      var rank = idx + 2;
+      var tierClass = rank === 2 ? 'tier-2' : (rank === 3 ? 'tier-3' : '');
+      html += '<div class="lb-row">' +
+        '<span class="lb-rank ' + tierClass + '">' + String(rank).padStart(2, '0') + '</span>' +
+        '<div class="lb-clan"><div class="lb-clan-info"><p class="name">' + escapeHtml(entry.clanName) + '</p></div></div>' +
+        '<div class="lb-right"><span class="lb-elo">' + (entry.elo || 0) + '</span></div>' +
+      '</div>';
+    });
+    html += '</div></div>';
+
+    container.innerHTML = html;
+  }
+
+  // ============ CLAN REGISTRATION (write to Firestore) ============
+  const registerForm = document.getElementById('clan-register-form');
+  const registerStatus = document.getElementById('register-status');
+
+  if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      var user = auth.currentUser;
+      if (!user) return;
+
+      var clanName = document.getElementById('clan-name').value.trim();
+      var captainTag = document.getElementById('captain-tag').value.trim();
+      var contactEmail = document.getElementById('contact-email').value.trim();
+      if (!clanName || !captainTag || !contactEmail) return;
+
+      var submitBtn = document.getElementById('register-submit-btn');
+      var originalLabel = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting…';
+      registerStatus.style.display = 'none';
+
+      try {
+        await addDoc(collection(db, 'clans'), {
+          name: clanName,
+          captainUid: user.uid,
+          captainTag: captainTag,
+          contactEmail: contactEmail,
+          status: 'pending',
+          createdAt: serverTimestamp()
+        });
+        registerStatus.className = 'auth-error';
+        registerStatus.style.background = 'rgba(61,214,140,.1)';
+        registerStatus.style.borderColor = 'rgba(61,214,140,.3)';
+        registerStatus.style.color = 'var(--win)';
+        registerStatus.textContent = 'Roster submitted! An admin will review your registration shortly.';
+        registerStatus.style.display = 'block';
+        registerForm.reset();
+      } catch (err) {
+        registerStatus.style.background = '';
+        registerStatus.style.borderColor = '';
+        registerStatus.style.color = '';
+        registerStatus.textContent = 'Could not submit your roster. Please try again.';
+        registerStatus.style.display = 'block';
+        console.warn('Clan registration error:', err);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalLabel;
+      }
+    });
+  }
+
+  // ============ ADMIN: CREATE TOURNAMENT ============
+  const tournamentForm = document.getElementById('admin-tournament-form');
+  if (tournamentForm) {
+    tournamentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      var statusEl = document.getElementById('admin-tournament-status');
+      statusEl.style.display = 'none';
+      try {
+        await addDoc(collection(db, 'tournaments'), {
+          name: document.getElementById('t-name').value.trim(),
+          mode: document.getElementById('t-mode').value.trim(),
+          format: document.getElementById('t-format').value.trim(),
+          prizePool: Number(document.getElementById('t-prize').value || 0),
+          slotsTotal: Number(document.getElementById('t-slots').value || 0),
+          slotsFilled: 0,
+          status: document.getElementById('t-status').value,
+          createdAt: serverTimestamp()
+        });
+        tournamentForm.reset();
+        statusEl.style.color = 'var(--win)';
+        statusEl.style.background = 'rgba(61,214,140,.1)';
+        statusEl.style.borderColor = 'rgba(61,214,140,.3)';
+        statusEl.textContent = 'Tournament created.';
+        statusEl.style.display = 'block';
+      } catch (err) {
+        statusEl.style.color = '';
+        statusEl.style.background = '';
+        statusEl.style.borderColor = '';
+        statusEl.textContent = 'Failed to create tournament. Check your admin permissions.';
+        statusEl.style.display = 'block';
+        console.warn('Create tournament error:', err);
+      }
+    });
+  }
+
+  // ============ ADMIN: UPDATE LEADERBOARD ENTRY ============
+  const lbForm = document.getElementById('admin-leaderboard-form');
+  if (lbForm) {
+    lbForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      var statusEl = document.getElementById('admin-lb-status');
+      statusEl.style.display = 'none';
+      var clanName = document.getElementById('lb-clan').value.trim();
+      if (!clanName) return;
+      var docId = clanName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      try {
+        await setDoc(doc(db, 'leaderboard', docId || ('clan-' + Date.now())), {
+          clanName: clanName,
+          elo: Number(document.getElementById('lb-elo').value || 0),
+          wl: document.getElementById('lb-wl').value.trim(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+        lbForm.reset();
+        statusEl.style.color = 'var(--win)';
+        statusEl.style.background = 'rgba(61,214,140,.1)';
+        statusEl.style.borderColor = 'rgba(61,214,140,.3)';
+        statusEl.textContent = 'Ranking saved.';
+        statusEl.style.display = 'block';
+      } catch (err) {
+        statusEl.style.color = '';
+        statusEl.style.background = '';
+        statusEl.style.borderColor = '';
+        statusEl.textContent = 'Failed to save ranking. Check your admin permissions.';
+        statusEl.style.display = 'block';
+        console.warn('Leaderboard update error:', err);
+      }
+    });
+  }
+
+  // ============ ADMIN: PENDING CLAN REGISTRATIONS ============
+  function loadPendingClans(){
+    if (unsubscribePending) { unsubscribePending(); }
+    var listEl = document.getElementById('admin-pending-list');
+    var countEl = document.getElementById('admin-pending-count');
+    if (!listEl || !countEl) return;
+
+    var pendingQuery = query(collection(db, 'clans'), where('status', '==', 'pending'));
+    unsubscribePending = onSnapshot(pendingQuery, (snapshot) => {
+      var clans = [];
+      snapshot.forEach((docSnap) => clans.push({ id: docSnap.id, ...docSnap.data() }));
+      countEl.textContent = clans.length + ' clan' + (clans.length === 1 ? '' : 's') + ' awaiting review.';
+      listEl.innerHTML = clans.map(function(c){
+        return '<div class="contact-card">' +
+          '<h3>' + escapeHtml(c.name) + '</h3>' +
+          '<p>Captain ID: ' + escapeHtml(c.captainTag) + '<br>Email: ' + escapeHtml(c.contactEmail) + '</p>' +
+        '</div>';
+      }).join('');
+    }, (err) => {
+      console.warn('Pending clans listener error:', err);
+      countEl.textContent = 'Could not load pending registrations.';
+    });
+  }
+</script>
+
+<script>
+  // ============ 3D HERO SCENE (Three.js r128) ============
+  // Custom drag-to-orbit since OrbitControls isn't bundled with this build.
+  (function initHeroScene(){
+    var canvas = document.getElementById('hero-canvas');
+    var fallback = document.getElementById('hero-fallback');
+    if (!canvas || typeof THREE === 'undefined') return;
+
+    try {
+      runScene(canvas, fallback);
+    } catch (err) {
+      // WebGL unsupported/disabled, or any Three.js init failure.
+      // Leave the CSS fallback visible — never leave the hero blank.
+      console.warn('Hero 3D scene failed to initialize, showing fallback background.', err);
+    }
+  })();
+
+  function runScene(canvas, fallback){
+    var heroSection = document.getElementById('home');
+    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
+    camera.position.set(0, 0, 9);
+
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    function sizeRenderer(){
+      var w = heroSection.clientWidth;
+      var h = heroSection.clientHeight;
+      if (w === 0 || h === 0) return;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+    sizeRenderer();
+
+    var acid = 0xC8FF3D;
+    var dimLine = 0x4A4A52;
+
+    // Core: wireframe icosahedron, the "bracket node" centerpiece
+    var coreGroup = new THREE.Group();
+    var icoGeo = new THREE.IcosahedronGeometry(2.1, 1);
+    var icoWire = new THREE.WireframeGeometry(icoGeo);
+    var icoLines = new THREE.LineSegments(icoWire, new THREE.LineBasicMaterial({ color: acid, transparent: true, opacity: 0.55 }));
+    coreGroup.add(icoLines);
+
+    var icoFillMat = new THREE.MeshBasicMaterial({ color: 0x1D1D21, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+    var icoFill = new THREE.Mesh(icoGeo, icoFillMat);
+    coreGroup.add(icoFill);
+    scene.add(coreGroup);
+
+    // Inner nested icosahedron, slightly offset rotation for depth
+    var icoGeo2 = new THREE.IcosahedronGeometry(1.3, 0);
+    var icoWire2 = new THREE.WireframeGeometry(icoGeo2);
+    var icoLines2 = new THREE.LineSegments(icoWire2, new THREE.LineBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.18 }));
+    coreGroup.add(icoLines2);
+
+    // Orbiting particle ring — represents the "bracket field" of competing clans
+    var particleCount = 220;
+    var positions = new Float32Array(particleCount * 3);
+    var ringRadii = [];
+    for (var i = 0; i < particleCount; i++){
+      var radius = 3.4 + Math.random() * 2.4;
+      var angle = Math.random() * Math.PI * 2;
+      var height = (Math.random() - 0.5) * 1.6;
+      positions[i*3] = Math.cos(angle) * radius;
+      positions[i*3+1] = height;
+      positions[i*3+2] = Math.sin(angle) * radius;
+      ringRadii.push(radius);
+    }
+    var particleGeo = new THREE.BufferGeometry();
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    var particleMat = new THREE.PointsMaterial({ color: acid, size: 0.045, transparent: true, opacity: 0.85, sizeAttenuation: true });
+    var particles = new THREE.Points(particleGeo, particleMat);
+    scene.add(particles);
+
+    // Faint connective lines from a few particles to the core (bracket-line motif)
+    var lineGroup = new THREE.Group();
+    var lineMat = new THREE.LineBasicMaterial({ color: acid, transparent: true, opacity: 0.12 });
+    for (var l = 0; l < 18; l++){
+      var idx = Math.floor(Math.random() * particleCount);
+      var px = positions[idx*3], py = positions[idx*3+1], pz = positions[idx*3+2];
+      var lineGeo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0,0,0),
+        new THREE.Vector3(px, py, pz)
+      ]);
+      lineGroup.add(new THREE.Line(lineGeo, lineMat));
+    }
+    scene.add(lineGroup);
+
+    // Outer faint grid ring for structure (HUD radar feel)
+    var ringGeo = new THREE.RingGeometry(5.6, 5.62, 64);
+    var ringMat = new THREE.MeshBasicMaterial({ color: dimLine, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
+    var ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.rotation.x = Math.PI / 2.3;
+    scene.add(ring);
+
+    // ---- Interaction state ----
+    var sceneGroup = new THREE.Group();
+    sceneGroup.add(coreGroup, particles, lineGroup, ring);
+    scene.add(sceneGroup);
+
+    var dragging = false;
+    var lastX = 0, lastY = 0;
+    var velX = 0, velY = 0;
+    var rotX = 0.15, rotY = 0;
+    var autoRotate = true;
+
+    function pointerDown(x, y){
+      dragging = true; autoRotate = false; lastX = x; lastY = y; velX = 0; velY = 0;
+    }
+    function pointerMove(x, y){
+      if (!dragging) return;
+      var dx = x - lastX, dy = y - lastY;
+      velY = dx * 0.005;
+      velX = dy * 0.005;
+      rotY += velY;
+      rotX += velX;
+      rotX = Math.max(-1.1, Math.min(1.1, rotX));
+      lastX = x; lastY = y;
+    }
+    function pointerUp(){ dragging = false; }
+
+    canvas.addEventListener('mousedown', function(e){ pointerDown(e.clientX, e.clientY); });
+    window.addEventListener('mousemove', function(e){ pointerMove(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', pointerUp);
+
+    canvas.addEventListener('touchstart', function(e){
+      var t = e.touches[0]; pointerDown(t.clientX, t.clientY);
+    }, { passive: true });
+    canvas.addEventListener('touchmove', function(e){
+      var t = e.touches[0]; pointerMove(t.clientX, t.clientY);
+    }, { passive: true });
+    canvas.addEventListener('touchend', pointerUp);
+
+    // Subtle parallax on mouse position when not dragging
+    var mouseNX = 0, mouseNY = 0;
+    window.addEventListener('mousemove', function(e){
+      var rect = heroSection.getBoundingClientRect();
+      mouseNX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseNY = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+    });
+
+    window.addEventListener('resize', sizeRenderer);
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(sizeRenderer);
+    }
+
+    var visible = true;
+    if ('IntersectionObserver' in window){
+      var observer = new IntersectionObserver(function(entries){
+        visible = entries[0].isIntersecting;
+      }, { threshold: 0.05 });
+      observer.observe(heroSection);
+    }
+
+    var clock = new THREE.Clock();
+    function animate(){
+      requestAnimationFrame(animate);
+      if (!visible) return;
+
+      var delta = clock.getDelta();
+
+      if (!dragging){
+        velX *= 0.92; velY *= 0.92;
+        rotX += velX; rotY += velY;
+        rotX = Math.max(-1.1, Math.min(1.1, rotX));
+        if (!prefersReducedMotion && Math.abs(velX) < 0.0001 && Math.abs(velY) < 0.0001){
+          rotY += delta * 0.12;
+        }
+      }
+
+      sceneGroup.rotation.x = rotX + mouseNY * 0.08;
+      sceneGroup.rotation.y = rotY + mouseNX * 0.08;
+
+      icoLines2.rotation.y -= delta * 0.18;
+      particles.rotation.y += delta * 0.05;
+
+      renderer.render(scene, camera);
+      if (fallback) { fallback.classList.add('is-hidden'); }
+    }
+    if (!prefersReducedMotion){
+      animate();
+    } else {
+      renderer.render(scene, camera);
+    }
+    if (fallback) { fallback.classList.add('is-hidden'); }
+  }
+</script>
+
+<script>
+  // Mobile menu toggle
+  var menuToggle = document.getElementById('menu-toggle');
+  var mobileMenu = document.getElementById('mobile-menu');
+  var iconMenu = document.getElementById('icon-menu');
+  var iconClose = document.getElementById('icon-close');
+
+  function closeMenu(){
+    mobileMenu.classList.remove('is-open');
+    menuToggle.setAttribute('aria-expanded', 'false');
+    iconMenu.style.display = '';
+    iconClose.style.display = 'none';
+  }
+  function openMenu(){
+    mobileMenu.classList.add('is-open');
+    menuToggle.setAttribute('aria-expanded', 'true');
+    iconMenu.style.display = 'none';
+    iconClose.style.display = '';
+  }
+  if (menuToggle) {
+    menuToggle.addEventListener('click', function(){
+      var isOpen = menuToggle.getAttribute('aria-expanded') === 'true';
+      if (isOpen) { closeMenu(); } else { openMenu(); }
+    });
+  }
+  if (mobileMenu) {
+    var menuLinks = mobileMenu.querySelectorAll('a');
+    for (var i = 0; i < menuLinks.length; i++) {
+      menuLinks[i].addEventListener('click', closeMenu);
+    }
+  }
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closeMenu();
+  });
+
+  // Tournament filter tabs (no-op gracefully until real tournament cards exist)
+  var tabs = document.querySelectorAll('.tab-btn');
+  var cards = document.querySelectorAll('#tournament-grid .tourney-card');
+
+  for (var t = 0; t < tabs.length; t++) {
+    tabs[t].addEventListener('click', function(){
+      for (var j = 0; j < tabs.length; j++) { tabs[j].setAttribute('aria-selected', 'false'); }
+      this.setAttribute('aria-selected', 'true');
+
+      if (cards.length === 0) { return; }
+
+      var filter = this.getAttribute('data-filter');
+      for (var k = 0; k < cards.length; k++) {
+        var matches = filter === 'all' || cards[k].getAttribute('data-status') === filter;
+        cards[k].style.display = matches ? '' : 'none';
+      }
+    });
+  }
+
+  // Prevent disabled CTA from navigating
+  var disabledEls = document.querySelectorAll('[aria-disabled="true"]');
+  for (var d = 0; d < disabledEls.length; d++) {
+    disabledEls[d].addEventListener('click', function(e){ e.preventDefault(); });
+  }
+
+  // Links marked data-pending point to real destinations that don't exist yet
+  // (social profiles, legal pages). Show a small toast instead of a dead navigation.
+  var pendingToast = document.createElement('div');
+  pendingToast.className = 'pending-toast';
+  pendingToast.setAttribute('role', 'status');
+  pendingToast.setAttribute('aria-live', 'polite');
+  document.body.appendChild(pendingToast);
+  var pendingTimer = null;
+
+  var pendingEls = document.querySelectorAll('[data-pending="true"]');
+  for (var p = 0; p < pendingEls.length; p++) {
+    pendingEls[p].addEventListener('click', function(e){
+      e.preventDefault();
+      var label = this.getAttribute('aria-label') || this.textContent.trim() || 'This link';
+      pendingToast.textContent = label + ' isn\'t connected yet.';
+      pendingToast.classList.add('is-visible');
+      clearTimeout(pendingTimer);
+      pendingTimer = setTimeout(function(){ pendingToast.classList.remove('is-visible'); }, 2400);
+    });
+  }
+
+  // Demo-only form handling (no backend wired up)
+  var forms = document.querySelectorAll('form');
+  for (var f = 0; f < forms.length; f++) {
+    forms[f].addEventListener('submit', function(e){
+      e.preventDefault();
+      var btn = this.querySelector('button[type="submit"]');
+      if (!btn) return;
+      var original = btn.textContent;
+      btn.textContent = 'Submitted ✓';
+      btn.disabled = true;
+      var form = this;
+      setTimeout(function(){
+        btn.textContent = original;
+        btn.disabled = false;
+        form.reset();
+      }, 2200);
+    });
+  }
+</script>
+
+</div><!-- /#app-root -->
+
+</body>
+</html>
