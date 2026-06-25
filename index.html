@@ -9,8 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800;900&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-<script src="https://unpkg.com/three@0.128.0/build/three.min.js"></script>
+<script async src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 
 <style>
 /* ============ RESET & BASE ============ */
@@ -227,10 +226,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 /* ============ HERO (asymmetric, off-center) ============ */
 .hero{ position:relative; overflow:hidden; border-bottom:1px solid var(--line); background:var(--bg); }
 
-/* Pure-CSS animated fallback — always visible behind the 3D canvas.
-   If Three.js loads, JS fades this out once the scene renders its first frame.
-   If Three.js fails to load (blocked CDN, restrictive in-app browser, etc.),
-   this keeps the hero animated instead of going flat/static. */
+/* Pure-CSS animated background for the hero section. */
 .hero-fallback{
   position:absolute; inset:0; z-index:0; pointer-events:none;
   opacity:1; transition:opacity .6s ease;
@@ -268,11 +264,6 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
   background:radial-gradient(circle, rgba(200,255,61,.1), rgba(200,255,61,0) 70%);
   filter:blur(60px); pointer-events:none; z-index:1;
 }
-#hero-canvas{
-  position:absolute; inset:0; z-index:0; width:100%; height:100%; display:block;
-  cursor:grab;
-}
-#hero-canvas:active{ cursor:grabbing; }
 .hero-shell{ position:relative; display:flex; flex-direction:column; z-index:2; }
 .hero-main{ display:grid; grid-template-columns:1fr; }
 @media (min-width:1024px){ .hero-main{ grid-template-columns:1fr 340px; } }
@@ -609,6 +600,29 @@ textarea.field-input{ resize:none; min-height:auto; }
 @media (min-width:480px){ .field-row{ grid-template-columns:1fr 1fr; } }
 .form-note{ font-family:'JetBrains Mono',monospace; font-size:.75rem; color:var(--ink-dim); }
 
+/* ============ ROSTER FIELDS ============ */
+.roster-section-label{
+  font-family:'JetBrains Mono',monospace; font-size:.6875rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:.06em; color:var(--acid);
+  display:flex; align-items:center; gap:8px; padding:10px 0 4px;
+  border-top:1px solid var(--line); margin-top:4px;
+}
+.roster-section-label svg{ flex-shrink:0; }
+.roster-player-row{
+  display:grid; grid-template-columns:24px 1fr; gap:10px; align-items:center;
+}
+.roster-player-num{
+  font-family:'JetBrains Mono',monospace; font-size:.75rem; font-weight:700;
+  color:var(--ink-dim); text-align:right; padding-top:28px;
+}
+.roster-sub-row{
+  display:grid; grid-template-columns:24px 1fr; gap:10px; align-items:center;
+}
+.roster-sub-label{
+  font-family:'JetBrains Mono',monospace; font-size:.75rem; font-weight:700;
+  color:var(--ink-dim); text-align:right; padding-top:28px;
+}
+
 /* ============ CONTACT (inverse asymmetric: FAQ wide left, methods narrow right) ============ */
 .contact-layout{ display:grid; gap:24px; grid-template-columns:1fr; align-items:start; }
 @media (min-width:1024px){ .contact-layout{ grid-template-columns:1.4fr 1fr; } }
@@ -626,6 +640,8 @@ textarea.field-input{ resize:none; min-height:auto; }
 
 .contact-side{ display:flex; flex-direction:column; gap:16px; }
 .contact-card{ border:1px solid var(--line); background:var(--panel); padding:24px; }
+.pending-actions{ display:flex; gap:10px; margin-top:14px; }
+.pending-actions .btn{ min-height:40px; padding:10px 16px; font-size:.75rem; }
 .contact-icon{ width:44px; height:44px; background:var(--acid-soft); color:var(--acid); display:flex; align-items:center; justify-content:center; margin-bottom:16px; }
 .contact-card h3{ font-size:1.0625rem; }
 .contact-card p{ color:var(--ink-soft); font-size:.9375rem; margin-top:8px; line-height:1.6; }
@@ -666,6 +682,37 @@ textarea.field-input{ resize:none; min-height:auto; }
     transition-duration:.001ms !important; scroll-behavior:auto !important;
   }
 }
+
+/* ============ ADMIN TOURNAMENT CARD ACTIONS ============ */
+.tourney-admin-actions{
+  display:none; gap:8px; margin-top:14px; padding-top:12px; border-top:1px solid var(--line);
+}
+.is-admin .tourney-admin-actions{ display:flex; }
+.tourney-admin-actions .btn{ min-height:36px; padding:8px 14px; font-size:.72rem; flex:1; }
+.btn-danger{ border:2px solid rgba(255,92,92,.4); color:var(--live); }
+.btn-danger:hover{ background:rgba(255,92,92,.1); border-color:var(--live); }
+
+/* ============ EDIT TOURNAMENT MODAL ============ */
+.modal-backdrop{
+  position:fixed; inset:0; z-index:200; background:rgba(0,0,0,.72);
+  display:flex; align-items:center; justify-content:center; padding:24px;
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.modal-backdrop.is-open{ opacity:1; pointer-events:auto; }
+.modal-box{
+  background:var(--panel); border:1px solid var(--line); width:100%; max-width:520px;
+  max-height:90vh; overflow-y:auto; padding:32px; display:flex; flex-direction:column; gap:20px;
+  transform:translateY(12px); transition:transform .25s ease;
+}
+.modal-backdrop.is-open .modal-box{ transform:translateY(0); }
+.modal-header{ display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.modal-header h3{ font-size:1.25rem; }
+.modal-close{
+  width:36px; height:36px; display:flex; align-items:center; justify-content:center;
+  color:var(--ink-dim); border:1px solid var(--line); border-radius:2px;
+  transition:background .2s ease, color .2s ease;
+}
+.modal-close:hover{ background:var(--panel-soft); color:var(--ink); }
 
 .pending-toast{
   position:fixed; left:50%; bottom:28px; transform:translate(-50%,12px);
@@ -788,7 +835,6 @@ textarea.field-input{ resize:none; min-height:auto; }
   <!-- ============ HERO (asymmetric layout + live strip) ============ -->
   <section id="home" class="hero">
     <div class="hero-fallback" id="hero-fallback" aria-hidden="true"></div>
-    <canvas id="hero-canvas" aria-hidden="true"></canvas>
     <div class="hero-noise" aria-hidden="true"></div>
     <div class="hero-glow" aria-hidden="true"></div>
     <div class="hero-shell">
@@ -1009,8 +1055,76 @@ textarea.field-input{ resize:none; min-height:auto; }
             <input id="contact-email" type="email" required placeholder="you@clan.gg" class="field-input" />
           </div>
         </div>
+        <div>
+          <label for="tournament-select" class="field-label">Tournament</label>
+          <select id="tournament-select" required class="field-input">
+            <option value="">Loading tournaments…</option>
+          </select>
+        </div>
+
+        <!-- ===== STARTING 5 ===== -->
+        <div class="roster-section-label">
+          <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+          Starting lineup — 5 igrača
+        </div>
+        <div class="roster-player-row">
+          <span class="roster-player-num">1</span>
+          <div>
+            <label for="player-1" class="field-label">Igrač 1 — Standoff 2 UID</label>
+            <input id="player-1" type="text" required placeholder="Nickname / UID" class="field-input" />
+          </div>
+        </div>
+        <div class="roster-player-row">
+          <span class="roster-player-num">2</span>
+          <div>
+            <label for="player-2" class="field-label">Igrač 2 — Standoff 2 UID</label>
+            <input id="player-2" type="text" required placeholder="Nickname / UID" class="field-input" />
+          </div>
+        </div>
+        <div class="roster-player-row">
+          <span class="roster-player-num">3</span>
+          <div>
+            <label for="player-3" class="field-label">Igrač 3 — Standoff 2 UID</label>
+            <input id="player-3" type="text" required placeholder="Nickname / UID" class="field-input" />
+          </div>
+        </div>
+        <div class="roster-player-row">
+          <span class="roster-player-num">4</span>
+          <div>
+            <label for="player-4" class="field-label">Igrač 4 — Standoff 2 UID</label>
+            <input id="player-4" type="text" required placeholder="Nickname / UID" class="field-input" />
+          </div>
+        </div>
+        <div class="roster-player-row">
+          <span class="roster-player-num">5</span>
+          <div>
+            <label for="player-5" class="field-label">Igrač 5 — Standoff 2 UID</label>
+            <input id="player-5" type="text" required placeholder="Nickname / UID" class="field-input" />
+          </div>
+        </div>
+
+        <!-- ===== IZMJENE ===== -->
+        <div class="roster-section-label">
+          <svg class="icon icon-sm" viewBox="0 0 24 24" aria-hidden="true"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+          Izmjene — 2 igrača
+        </div>
+        <div class="roster-sub-row">
+          <span class="roster-sub-label">S1</span>
+          <div>
+            <label for="sub-1" class="field-label">Izmjena 1 — Standoff 2 UID</label>
+            <input id="sub-1" type="text" required placeholder="Nickname / UID" class="field-input" />
+          </div>
+        </div>
+        <div class="roster-sub-row">
+          <span class="roster-sub-label">S2</span>
+          <div>
+            <label for="sub-2" class="field-label">Izmjena 2 — Standoff 2 UID</label>
+            <input id="sub-2" type="text" required placeholder="Nickname / UID" class="field-input" />
+          </div>
+        </div>
+
         <button type="submit" id="register-submit-btn" class="btn btn-primary" style="width:100%;">Submit roster</button>
-        <p class="form-note">No payment required for qualifier rounds.</p>
+        <p class="form-note">No payment required for qualifier rounds. Svi igrači moraju biti prijavljeni sa validnim Standoff 2 UID-om.</p>
       </form>
     </div>
   </section>
@@ -1046,21 +1160,22 @@ textarea.field-input{ resize:none; min-height:auto; }
           <p>Slot transfers are allowed up to 48 hours before the bracket locks. Contact support with both clan tags to request one.</p>
         </details>
 
-        <form class="support-form" aria-label="Support request form">
+        <form id="support-form" class="support-form" aria-label="Support request form" novalidate>
           <h3>Send a message</h3>
+          <div id="support-form-status" class="auth-error" role="alert" style="display:none; margin-bottom:4px;"></div>
           <div class="field-row">
             <div>
-              <label for="full-name" class="field-label">Name</label>
-              <input id="full-name" type="text" required class="field-input" />
+              <label for="support-name" class="field-label">Name</label>
+              <input id="support-name" name="from_name" type="text" required class="field-input" />
             </div>
             <div>
-              <label for="email" class="field-label">Email</label>
-              <input id="email" type="email" required class="field-input" />
+              <label for="support-email" class="field-label">Email</label>
+              <input id="support-email" name="reply_to" type="email" required class="field-input" />
             </div>
           </div>
           <div>
-            <label for="topic" class="field-label">Topic</label>
-            <select id="topic" class="field-input">
+            <label for="support-topic" class="field-label">Topic</label>
+            <select id="support-topic" name="topic" class="field-input">
               <option>Match dispute</option>
               <option>Sponsorship</option>
               <option>Registration issue</option>
@@ -1068,10 +1183,10 @@ textarea.field-input{ resize:none; min-height:auto; }
             </select>
           </div>
           <div>
-            <label for="message" class="field-label">Message</label>
-            <textarea id="message" rows="4" required class="field-input"></textarea>
+            <label for="support-message" class="field-label">Message</label>
+            <textarea id="support-message" name="message" rows="4" required class="field-input"></textarea>
           </div>
-          <button type="submit" class="btn btn-primary" style="width:100%;">Send message</button>
+          <button type="submit" id="support-submit-btn" class="btn btn-primary" style="width:100%;">Send message</button>
         </form>
       </div>
 
@@ -1080,19 +1195,19 @@ textarea.field-input{ resize:none; min-height:auto; }
           <div class="contact-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="13"/><line x1="12" y1="16" x2="12" y2="16.01"/></svg></div>
           <h3>Match Disputes</h3>
           <p>Report a scoring error, suspected cheating, or a no-show within 24 hours of your match ending.</p>
-          <a href="mailto:disputes@hejteri.gg" class="contact-link">disputes@hejteri.gg<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
+          <a href="mailto:hejterigg@gmail.com" class="contact-link">hejterigg@gmail.com<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
         </div>
         <div class="contact-card">
           <div class="contact-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M11 17H4a2 2 0 0 1-2-2v-1a4 4 0 0 1 4-4h1"/><path d="M13 7h7a2 2 0 0 1 2 2v1a4 4 0 0 1-4 4h-1"/><path d="M8 5l4 4-4 4"/><path d="M16 19l-4-4 4-4"/></svg></div>
           <h3>Sponsorship</h3>
           <p>Brand placements, prize pool backing, and co-branded tournaments. Median response time: 2 business days.</p>
-          <a href="mailto:partners@hejteri.gg" class="contact-link">partners@hejteri.gg<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
+          <a href="mailto:hejterigg@gmail.com" class="contact-link">hejterigg@gmail.com<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
         </div>
         <div class="contact-card">
           <div class="contact-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="14.83" y1="9.17" x2="18.36" y2="5.64"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/></svg></div>
           <h3>General Support</h3>
           <p>Account access, registration issues, or anything that doesn't fit the categories above.</p>
-          <a href="mailto:support@hejteri.gg" class="contact-link">support@hejteri.gg<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
+          <a href="mailto:hejterigg@gmail.com" class="contact-link">hejterigg@gmail.com<svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
         </div>
       </div>
     </div>
@@ -1239,8 +1354,8 @@ textarea.field-input{ resize:none; min-height:auto; }
     signOut, OAuthProvider, signInWithPopup
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
   import {
-    getFirestore, doc, getDoc, setDoc, addDoc, collection, query, where, orderBy,
-    onSnapshot, serverTimestamp, limit
+    getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, collection, query, where, orderBy,
+    onSnapshot, serverTimestamp, limit, increment, getDocs
   } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
   const firebaseConfig = {
@@ -1373,7 +1488,16 @@ textarea.field-input{ resize:none; min-height:auto; }
   let unsubscribeLeaderboard = null;
   let unsubscribePending = null;
 
+  // Timeout — ako Firebase ne odgovori za 6s, prikaži login formu
+  var authTimeout = setTimeout(function(){
+    if (authLoading.style.display !== 'none') {
+      authLoading.style.display = 'none';
+      authForm.style.display = 'flex';
+    }
+  }, 6000);
+
   onAuthStateChanged(auth, async (user) => {
+    clearTimeout(authTimeout);
     if (user) {
       await ensureUserDoc(user);
 
@@ -1418,6 +1542,12 @@ textarea.field-input{ resize:none; min-height:auto; }
     if (adminSection) adminSection.style.display = isAdmin ? '' : 'none';
     if (adminNavLink) adminNavLink.style.display = isAdmin ? '' : 'none';
     if (adminNavLinkMobile) adminNavLinkMobile.style.display = isAdmin ? '' : 'none';
+    // Toggle body class so CSS can show/hide admin actions on tournament cards
+    if (isAdmin) {
+      document.body.classList.add('is-admin');
+    } else {
+      document.body.classList.remove('is-admin');
+    }
     if (isAdmin) loadPendingClans();
   }
 
@@ -1430,6 +1560,17 @@ textarea.field-input{ resize:none; min-height:auto; }
       const tournaments = [];
       snapshot.forEach((docSnap) => tournaments.push({ id: docSnap.id, ...docSnap.data() }));
       renderTournaments(tournaments);
+      // Populate registration tournament dropdown
+      const sel = document.getElementById('tournament-select');
+      if (sel) {
+        const openTournaments = tournaments.filter((t) => t.status !== 'past');
+        if (openTournaments.length === 0) {
+          sel.innerHTML = '<option value="">No open tournaments at this time</option>';
+        } else {
+          sel.innerHTML = '<option value="">— Select a tournament —</option>' +
+            openTournaments.map((t) => '<option value="' + escapeHtml(t.id) + '">' + escapeHtml(t.name) + '</option>').join('');
+        }
+      }
     }, (err) => {
       console.warn('Tournaments listener error:', err);
     });
@@ -1529,6 +1670,16 @@ textarea.field-input{ resize:none; min-height:auto; }
         '</div>' +
         '<div class="slot-bar"><div class="slot-fill" style="width:' + pct + '%"></div></div>' +
         '<a href="#register" class="btn btn-primary" style="margin-top:22px;">' + (t.status === 'past' ? 'View results' : 'Join tournament') + '</a>' +
+        '<div class="tourney-admin-actions">' +
+          '<button type="button" class="btn btn-outline tourney-edit-btn" data-id="' + escapeHtml(t.id) + '" data-name="' + escapeHtml(t.name) + '" data-mode="' + escapeHtml(t.mode||'') + '" data-format="' + escapeHtml(t.format||'') + '" data-prize="' + (t.prizePool||0) + '" data-slots="' + (t.slotsTotal||0) + '" data-status="' + escapeHtml(t.status||'upcoming') + '">' +
+            '<svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>' +
+            'Uredi' +
+          '</button>' +
+          '<button type="button" class="btn btn-danger tourney-delete-btn" data-id="' + escapeHtml(t.id) + '" data-name="' + escapeHtml(t.name) + '">' +
+            '<svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>' +
+            'Obriši' +
+          '</button>' +
+        '</div>' +
       '</div>' +
     '</article>';
   }
@@ -1590,20 +1741,88 @@ textarea.field-input{ resize:none; min-height:auto; }
       var clanName = document.getElementById('clan-name').value.trim();
       var captainTag = document.getElementById('captain-tag').value.trim();
       var contactEmail = document.getElementById('contact-email').value.trim();
-      if (!clanName || !captainTag || !contactEmail) return;
+      var tournamentId = document.getElementById('tournament-select').value;
+
+      var players = [
+        document.getElementById('player-1').value.trim(),
+        document.getElementById('player-2').value.trim(),
+        document.getElementById('player-3').value.trim(),
+        document.getElementById('player-4').value.trim(),
+        document.getElementById('player-5').value.trim()
+      ];
+      var subs = [
+        document.getElementById('sub-1').value.trim(),
+        document.getElementById('sub-2').value.trim()
+      ];
+
+      var missingPlayer = players.some(function(p){ return !p; });
+      var missingSub = subs.some(function(s){ return !s; });
+
+      if (!clanName || !captainTag || !contactEmail || !tournamentId) {
+        registerStatus.style.background = '';
+        registerStatus.style.borderColor = '';
+        registerStatus.style.color = '';
+        registerStatus.textContent = 'Molimo popunite sva osnovna polja i odaberite turnir.';
+        registerStatus.style.display = 'block';
+        return;
+      }
+      if (missingPlayer) {
+        registerStatus.style.background = '';
+        registerStatus.style.borderColor = '';
+        registerStatus.style.color = '';
+        registerStatus.textContent = 'Svih 5 igrača moraju biti uneseni.';
+        registerStatus.style.display = 'block';
+        return;
+      }
+      if (missingSub) {
+        registerStatus.style.background = '';
+        registerStatus.style.borderColor = '';
+        registerStatus.style.color = '';
+        registerStatus.textContent = 'Obje izmjene moraju biti unesene.';
+        registerStatus.style.display = 'block';
+        return;
+      }
 
       var submitBtn = document.getElementById('register-submit-btn');
       var originalLabel = submitBtn.textContent;
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting…';
+      submitBtn.textContent = 'Provjeravam…';
       registerStatus.style.display = 'none';
 
+      // ---- Check for existing registration by this user for this tournament ----
+      try {
+        const dupQuery = query(
+          collection(db, 'clans'),
+          where('captainUid', '==', user.uid),
+          where('tournamentId', '==', tournamentId),
+          where('status', 'in', ['pending', 'approved'])
+        );
+        const dupSnap = await getDocs(dupQuery);
+        if (!dupSnap.empty) {
+          registerStatus.style.background = '';
+          registerStatus.style.borderColor = '';
+          registerStatus.style.color = '';
+          registerStatus.textContent = 'Već si prijavljen za ovaj turnir. Kontaktiraj nas ako trebaš izmjenu.';
+          registerStatus.style.display = 'block';
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalLabel;
+          return;
+        }
+      } catch (dupErr) {
+        console.warn('Duplicate check error:', dupErr);
+        // Ne blokiraj submit ako provjera ne uspije
+      }
+
+      submitBtn.textContent = 'Submitting…';
       try {
         await addDoc(collection(db, 'clans'), {
           name: clanName,
           captainUid: user.uid,
           captainTag: captainTag,
           contactEmail: contactEmail,
+          tournamentId: tournamentId,
+          players: players,
+          substitutes: subs,
           status: 'pending',
           createdAt: serverTimestamp()
         });
@@ -1710,9 +1929,28 @@ textarea.field-input{ resize:none; min-height:auto; }
       snapshot.forEach((docSnap) => clans.push({ id: docSnap.id, ...docSnap.data() }));
       countEl.textContent = clans.length + ' clan' + (clans.length === 1 ? '' : 's') + ' awaiting review.';
       listEl.innerHTML = clans.map(function(c){
+        var playersHtml = '';
+        if (c.players && c.players.length) {
+          playersHtml += '<p style="margin-top:8px; font-family:\'JetBrains Mono\',monospace; font-size:.72rem; color:var(--acid); text-transform:uppercase; letter-spacing:.04em;">Igrači</p>';
+          c.players.forEach(function(p, i){
+            playersHtml += '<p style="font-size:.8125rem; color:var(--ink-soft);">' + (i+1) + '. ' + escapeHtml(p) + '</p>';
+          });
+        }
+        if (c.substitutes && c.substitutes.length) {
+          playersHtml += '<p style="margin-top:6px; font-family:\'JetBrains Mono\',monospace; font-size:.72rem; color:var(--ink-dim); text-transform:uppercase; letter-spacing:.04em;">Izmjene</p>';
+          c.substitutes.forEach(function(s, i){
+            playersHtml += '<p style="font-size:.8125rem; color:var(--ink-soft);">S' + (i+1) + '. ' + escapeHtml(s) + '</p>';
+          });
+        }
         return '<div class="contact-card">' +
           '<h3>' + escapeHtml(c.name) + '</h3>' +
-          '<p>Captain ID: ' + escapeHtml(c.captainTag) + '<br>Email: ' + escapeHtml(c.contactEmail) + '</p>' +
+          '<p>Captain ID: ' + escapeHtml(c.captainTag) + '<br>Email: ' + escapeHtml(c.contactEmail) + (c.tournamentId ? '<br>Tournament ID: ' + escapeHtml(c.tournamentId) : '') + '</p>' +
+          playersHtml +
+          '<div class="pending-actions">' +
+            '<button type="button" class="btn btn-primary pending-approve-btn" data-clan-id="' + c.id + '" data-tournament-id="' + escapeHtml(c.tournamentId || '') + '" style="flex:1;">Approve</button>' +
+            '<button type="button" class="btn btn-outline pending-reject-btn" data-clan-id="' + c.id + '" style="flex:1;">Reject</button>' +
+          '</div>' +
+          '<p class="pending-action-status" data-clan-id="' + c.id + '" style="display:none; margin-top:10px; font-size:.75rem; color:var(--live);"></p>' +
         '</div>';
       }).join('');
     }, (err) => {
@@ -1720,200 +1958,146 @@ textarea.field-input{ resize:none; min-height:auto; }
       countEl.textContent = 'Could not load pending registrations.';
     });
   }
-</script>
 
-<script>
-  // ============ 3D HERO SCENE (Three.js r128) ============
-  // Custom drag-to-orbit since OrbitControls isn't bundled with this build.
-  (function initHeroScene(){
-    var canvas = document.getElementById('hero-canvas');
-    var fallback = document.getElementById('hero-fallback');
-    if (!canvas || typeof THREE === 'undefined') return;
+  // ============ ADMIN: DELETE TOURNAMENT ============
+  document.getElementById('tournament-grid').addEventListener('click', async function(e){
+    var deleteBtn = e.target.closest('.tourney-delete-btn');
+    if (deleteBtn) {
+      var tId = deleteBtn.getAttribute('data-id');
+      var tName = deleteBtn.getAttribute('data-name');
+      if (!tId) return;
+      if (!confirm('Sigurno želiš obrisati turnir "' + tName + '"? Ova akcija se ne može poništiti.')) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteDoc(doc(db, 'tournaments', tId));
+      } catch (err) {
+        alert('Greška pri brisanju turnira. Provjeri admin dozvole.');
+        deleteBtn.disabled = false;
+        console.warn('Delete tournament error:', err);
+      }
+      return;
+    }
+
+    // ============ ADMIN: OPEN EDIT MODAL ============
+    var editBtn = e.target.closest('.tourney-edit-btn');
+    if (editBtn) {
+      document.getElementById('edit-t-id').value    = editBtn.getAttribute('data-id');
+      document.getElementById('edit-t-name').value  = editBtn.getAttribute('data-name');
+      document.getElementById('edit-t-mode').value  = editBtn.getAttribute('data-mode');
+      document.getElementById('edit-t-format').value= editBtn.getAttribute('data-format');
+      document.getElementById('edit-t-prize').value = editBtn.getAttribute('data-prize');
+      document.getElementById('edit-t-slots').value = editBtn.getAttribute('data-slots');
+      document.getElementById('edit-t-status').value= editBtn.getAttribute('data-status');
+      var statusEl = document.getElementById('edit-modal-status');
+      statusEl.style.display = 'none';
+      document.getElementById('edit-tournament-modal').classList.add('is-open');
+    }
+  });
+
+  // Close modal
+  function closeEditModal(){
+    document.getElementById('edit-tournament-modal').classList.remove('is-open');
+  }
+  document.getElementById('edit-modal-close').addEventListener('click', closeEditModal);
+  document.getElementById('edit-modal-close2').addEventListener('click', closeEditModal);
+  document.getElementById('edit-tournament-modal').addEventListener('click', function(e){
+    if (e.target === this) closeEditModal();
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') closeEditModal();
+  });
+
+  // Save edited tournament
+  document.getElementById('edit-t-save').addEventListener('click', async function(){
+    var tId    = document.getElementById('edit-t-id').value;
+    var name   = document.getElementById('edit-t-name').value.trim();
+    var mode   = document.getElementById('edit-t-mode').value.trim();
+    var format = document.getElementById('edit-t-format').value.trim();
+    var prize  = Number(document.getElementById('edit-t-prize').value || 0);
+    var slots  = Number(document.getElementById('edit-t-slots').value || 0);
+    var status = document.getElementById('edit-t-status').value;
+    var statusEl = document.getElementById('edit-modal-status');
+
+    if (!tId || !name) {
+      statusEl.style.color = '';
+      statusEl.style.background = '';
+      statusEl.style.borderColor = '';
+      statusEl.textContent = 'Naziv turnira je obavezan.';
+      statusEl.style.display = 'block';
+      return;
+    }
+
+    this.disabled = true;
+    this.textContent = 'Čuvam…';
+    statusEl.style.display = 'none';
 
     try {
-      runScene(canvas, fallback);
+      await updateDoc(doc(db, 'tournaments', tId), {
+        name, mode, format,
+        prizePool: prize,
+        slotsTotal: slots,
+        status,
+        updatedAt: serverTimestamp()
+      });
+      closeEditModal();
     } catch (err) {
-      // WebGL unsupported/disabled, or any Three.js init failure.
-      // Leave the CSS fallback visible — never leave the hero blank.
-      console.warn('Hero 3D scene failed to initialize, showing fallback background.', err);
+      statusEl.style.color = '';
+      statusEl.style.background = '';
+      statusEl.style.borderColor = '';
+      statusEl.textContent = 'Greška pri čuvanju. Provjeri admin dozvole.';
+      statusEl.style.display = 'block';
+      console.warn('Edit tournament error:', err);
+    } finally {
+      this.disabled = false;
+      this.textContent = 'Sačuvaj izmjene';
     }
-  })();
+  });
 
-  function runScene(canvas, fallback){
-    var heroSection = document.getElementById('home');
-    var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-    var scene = new THREE.Scene();
-    var camera = new THREE.PerspectiveCamera(50, 1, 0.1, 100);
-    camera.position.set(0, 0, 9);
+  // since the list above is re-rendered live every time Firestore updates.
+  document.getElementById('admin-pending-list').addEventListener('click', async function(e){
+    var btn = e.target.closest('.pending-approve-btn, .pending-reject-btn');
+    if (!btn) return;
 
-    var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    var clanId = btn.getAttribute('data-clan-id');
+    var tournamentId = btn.getAttribute('data-tournament-id');
+    var newStatus = btn.classList.contains('pending-approve-btn') ? 'approved' : 'rejected';
+    var card = btn.closest('.contact-card');
+    var statusEl = card ? card.querySelector('.pending-action-status') : null;
+    var approveBtn = card ? card.querySelector('.pending-approve-btn') : null;
+    var rejectBtn = card ? card.querySelector('.pending-reject-btn') : null;
 
-    function sizeRenderer(){
-      var w = heroSection.clientWidth;
-      var h = heroSection.clientHeight;
-      if (w === 0 || h === 0) return;
-      renderer.setSize(w, h, false);
-      camera.aspect = w / h;
-      camera.updateProjectionMatrix();
-    }
-    sizeRenderer();
+    if (approveBtn) { approveBtn.disabled = true; approveBtn.style.opacity = '.55'; }
+    if (rejectBtn) { rejectBtn.disabled = true; rejectBtn.style.opacity = '.55'; }
 
-    var acid = 0xC8FF3D;
-    var dimLine = 0x4A4A52;
-
-    // Core: wireframe icosahedron, the "bracket node" centerpiece
-    var coreGroup = new THREE.Group();
-    var icoGeo = new THREE.IcosahedronGeometry(2.1, 1);
-    var icoWire = new THREE.WireframeGeometry(icoGeo);
-    var icoLines = new THREE.LineSegments(icoWire, new THREE.LineBasicMaterial({ color: acid, transparent: true, opacity: 0.55 }));
-    coreGroup.add(icoLines);
-
-    var icoFillMat = new THREE.MeshBasicMaterial({ color: 0x1D1D21, transparent: true, opacity: 0.35, side: THREE.DoubleSide });
-    var icoFill = new THREE.Mesh(icoGeo, icoFillMat);
-    coreGroup.add(icoFill);
-    scene.add(coreGroup);
-
-    // Inner nested icosahedron, slightly offset rotation for depth
-    var icoGeo2 = new THREE.IcosahedronGeometry(1.3, 0);
-    var icoWire2 = new THREE.WireframeGeometry(icoGeo2);
-    var icoLines2 = new THREE.LineSegments(icoWire2, new THREE.LineBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.18 }));
-    coreGroup.add(icoLines2);
-
-    // Orbiting particle ring — represents the "bracket field" of competing clans
-    var particleCount = 220;
-    var positions = new Float32Array(particleCount * 3);
-    var ringRadii = [];
-    for (var i = 0; i < particleCount; i++){
-      var radius = 3.4 + Math.random() * 2.4;
-      var angle = Math.random() * Math.PI * 2;
-      var height = (Math.random() - 0.5) * 1.6;
-      positions[i*3] = Math.cos(angle) * radius;
-      positions[i*3+1] = height;
-      positions[i*3+2] = Math.sin(angle) * radius;
-      ringRadii.push(radius);
-    }
-    var particleGeo = new THREE.BufferGeometry();
-    particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    var particleMat = new THREE.PointsMaterial({ color: acid, size: 0.045, transparent: true, opacity: 0.85, sizeAttenuation: true });
-    var particles = new THREE.Points(particleGeo, particleMat);
-    scene.add(particles);
-
-    // Faint connective lines from a few particles to the core (bracket-line motif)
-    var lineGroup = new THREE.Group();
-    var lineMat = new THREE.LineBasicMaterial({ color: acid, transparent: true, opacity: 0.12 });
-    for (var l = 0; l < 18; l++){
-      var idx = Math.floor(Math.random() * particleCount);
-      var px = positions[idx*3], py = positions[idx*3+1], pz = positions[idx*3+2];
-      var lineGeo = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(0,0,0),
-        new THREE.Vector3(px, py, pz)
-      ]);
-      lineGroup.add(new THREE.Line(lineGeo, lineMat));
-    }
-    scene.add(lineGroup);
-
-    // Outer faint grid ring for structure (HUD radar feel)
-    var ringGeo = new THREE.RingGeometry(5.6, 5.62, 64);
-    var ringMat = new THREE.MeshBasicMaterial({ color: dimLine, transparent: true, opacity: 0.4, side: THREE.DoubleSide });
-    var ring = new THREE.Mesh(ringGeo, ringMat);
-    ring.rotation.x = Math.PI / 2.3;
-    scene.add(ring);
-
-    // ---- Interaction state ----
-    var sceneGroup = new THREE.Group();
-    sceneGroup.add(coreGroup, particles, lineGroup, ring);
-    scene.add(sceneGroup);
-
-    var dragging = false;
-    var lastX = 0, lastY = 0;
-    var velX = 0, velY = 0;
-    var rotX = 0.15, rotY = 0;
-    var autoRotate = true;
-
-    function pointerDown(x, y){
-      dragging = true; autoRotate = false; lastX = x; lastY = y; velX = 0; velY = 0;
-    }
-    function pointerMove(x, y){
-      if (!dragging) return;
-      var dx = x - lastX, dy = y - lastY;
-      velY = dx * 0.005;
-      velX = dy * 0.005;
-      rotY += velY;
-      rotX += velX;
-      rotX = Math.max(-1.1, Math.min(1.1, rotX));
-      lastX = x; lastY = y;
-    }
-    function pointerUp(){ dragging = false; }
-
-    canvas.addEventListener('mousedown', function(e){ pointerDown(e.clientX, e.clientY); });
-    window.addEventListener('mousemove', function(e){ pointerMove(e.clientX, e.clientY); });
-    window.addEventListener('mouseup', pointerUp);
-
-    canvas.addEventListener('touchstart', function(e){
-      var t = e.touches[0]; pointerDown(t.clientX, t.clientY);
-    }, { passive: true });
-    canvas.addEventListener('touchmove', function(e){
-      var t = e.touches[0]; pointerMove(t.clientX, t.clientY);
-    }, { passive: true });
-    canvas.addEventListener('touchend', pointerUp);
-
-    // Subtle parallax on mouse position when not dragging
-    var mouseNX = 0, mouseNY = 0;
-    window.addEventListener('mousemove', function(e){
-      var rect = heroSection.getBoundingClientRect();
-      mouseNX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      mouseNY = ((e.clientY - rect.top) / rect.height) * 2 - 1;
-    });
-
-    window.addEventListener('resize', sizeRenderer);
-    if (document.fonts && document.fonts.ready) {
-      document.fonts.ready.then(sizeRenderer);
-    }
-
-    var visible = true;
-    if ('IntersectionObserver' in window){
-      var observer = new IntersectionObserver(function(entries){
-        visible = entries[0].isIntersecting;
-      }, { threshold: 0.05 });
-      observer.observe(heroSection);
-    }
-
-    var clock = new THREE.Clock();
-    function animate(){
-      requestAnimationFrame(animate);
-      if (!visible) return;
-
-      var delta = clock.getDelta();
-
-      if (!dragging){
-        velX *= 0.92; velY *= 0.92;
-        rotX += velX; rotY += velY;
-        rotX = Math.max(-1.1, Math.min(1.1, rotX));
-        if (!prefersReducedMotion && Math.abs(velX) < 0.0001 && Math.abs(velY) < 0.0001){
-          rotY += delta * 0.12;
+    try {
+      await updateDoc(doc(db, 'clans', clanId), {
+        status: newStatus,
+        reviewedAt: serverTimestamp()
+      });
+      // If approving and clan has a linked tournament, increment slotsFilled
+      if (newStatus === 'approved' && tournamentId) {
+        try {
+          await updateDoc(doc(db, 'tournaments', tournamentId), {
+            slotsFilled: increment(1)
+          });
+        } catch (slotErr) {
+          console.warn('Could not increment slotsFilled:', slotErr);
         }
       }
-
-      sceneGroup.rotation.x = rotX + mouseNY * 0.08;
-      sceneGroup.rotation.y = rotY + mouseNX * 0.08;
-
-      icoLines2.rotation.y -= delta * 0.18;
-      particles.rotation.y += delta * 0.05;
-
-      renderer.render(scene, camera);
-      if (fallback) { fallback.classList.add('is-hidden'); }
+      // No need to manually remove the card — the onSnapshot listener above
+      // re-renders the list automatically once status no longer equals 'pending'.
+    } catch (err) {
+      console.warn('Failed to update clan status:', err);
+      if (statusEl) {
+        statusEl.textContent = 'Failed — check Firestore rules allow admins to update clans.';
+        statusEl.style.display = 'block';
+      }
+      if (approveBtn) { approveBtn.disabled = false; approveBtn.style.opacity = ''; }
+      if (rejectBtn) { rejectBtn.disabled = false; rejectBtn.style.opacity = ''; }
     }
-    if (!prefersReducedMotion){
-      animate();
-    } else {
-      renderer.render(scene, camera);
-    }
-    if (fallback) { fallback.classList.add('is-hidden'); }
-  }
+  });
 </script>
-
 <script>
   // Mobile menu toggle
   var menuToggle = document.getElementById('menu-toggle');
@@ -1995,25 +2179,133 @@ textarea.field-input{ resize:none; min-height:auto; }
     });
   }
 
-  // Demo-only form handling (no backend wired up)
-  var forms = document.querySelectorAll('form');
-  for (var f = 0; f < forms.length; f++) {
-    forms[f].addEventListener('submit', function(e){
+  // ============ SUPPORT FORM — EmailJS ============
+  // Setup: emailjs.com → Create account → Add Gmail service → Create template
+  // Template variables used: {{from_name}}, {{reply_to}}, {{topic}}, {{message}}
+  // Then fill in your real Public Key, Service ID, and Template ID below.
+  var EMAILJS_PUBLIC_KEY  = 'v4amVeNyvykp60-cG';
+  var EMAILJS_SERVICE_ID  = 'service_vj67y8h';
+  var EMAILJS_TEMPLATE_ID = 'template_5dhtlxl';
+
+  (function(){
+    if (window.emailjs) {
+      emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
+    }
+  })();
+
+  var supportForm    = document.getElementById('support-form');
+  var supportStatus  = document.getElementById('support-form-status');
+  var supportSubmit  = document.getElementById('support-submit-btn');
+
+  if (supportForm) {
+    supportForm.addEventListener('submit', function(e) {
       e.preventDefault();
-      var btn = this.querySelector('button[type="submit"]');
-      if (!btn) return;
-      var original = btn.textContent;
-      btn.textContent = 'Submitted ✓';
-      btn.disabled = true;
-      var form = this;
-      setTimeout(function(){
-        btn.textContent = original;
-        btn.disabled = false;
-        form.reset();
-      }, 2200);
+
+      var name    = document.getElementById('support-name').value.trim();
+      var email   = document.getElementById('support-email').value.trim();
+      var topic   = document.getElementById('support-topic').value;
+      var message = document.getElementById('support-message').value.trim();
+
+      if (!name || !email || !message) {
+        supportStatus.style.background = '';
+        supportStatus.style.borderColor = '';
+        supportStatus.style.color = '';
+        supportStatus.textContent = 'Molimo popunite sva polja.';
+        supportStatus.style.display = 'block';
+        return;
+      }
+
+      if (!window.emailjs) {
+        supportStatus.style.background = '';
+        supportStatus.style.borderColor = '';
+        supportStatus.style.color = '';
+        supportStatus.textContent = 'Email servis nije učitan. Pokušaj direktno na hejterigg@gmail.com';
+        supportStatus.style.display = 'block';
+        return;
+      }
+
+      supportSubmit.disabled = true;
+      supportSubmit.textContent = 'Šaljem…';
+      supportStatus.style.display = 'none';
+
+      emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+        from_name: name,
+        reply_to:  email,
+        topic:     topic,
+        message:   message
+      }).then(function() {
+        supportStatus.style.background = 'rgba(61,214,140,.1)';
+        supportStatus.style.borderColor = 'rgba(61,214,140,.3)';
+        supportStatus.style.color = 'var(--win)';
+        supportStatus.textContent = 'Poruka je poslana! Odgovorit ćemo na tvoj email uskoro.';
+        supportStatus.style.display = 'block';
+        supportForm.reset();
+      }, function(err) {
+        supportStatus.style.background = '';
+        supportStatus.style.borderColor = '';
+        supportStatus.style.color = '';
+        supportStatus.textContent = 'Slanje nije uspjelo. Pokušaj direktno na hejterigg@gmail.com';
+        supportStatus.style.display = 'block';
+        console.warn('EmailJS error:', err);
+      }).finally(function() {
+        supportSubmit.disabled = false;
+        supportSubmit.textContent = 'Send message';
+      });
     });
   }
 </script>
+
+<!-- ============ EDIT TOURNAMENT MODAL ============ -->
+<div id="edit-tournament-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 id="edit-modal-title">Uredi turnir</h3>
+      <button type="button" id="edit-modal-close" class="modal-close" aria-label="Zatvori">
+        <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/></svg>
+      </button>
+    </div>
+    <div id="edit-modal-status" class="auth-error" role="alert" style="display:none;"></div>
+    <div style="display:flex; flex-direction:column; gap:14px;">
+      <input type="hidden" id="edit-t-id" />
+      <div class="field-row-1">
+        <label for="edit-t-name" class="field-label">Naziv turnira</label>
+        <input id="edit-t-name" type="text" required class="field-input" />
+      </div>
+      <div class="field-row">
+        <div>
+          <label for="edit-t-mode" class="field-label">Mod</label>
+          <input id="edit-t-mode" type="text" required class="field-input" />
+        </div>
+        <div>
+          <label for="edit-t-format" class="field-label">Format</label>
+          <input id="edit-t-format" type="text" required class="field-input" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div>
+          <label for="edit-t-prize" class="field-label">Nagradni fond ($)</label>
+          <input id="edit-t-prize" type="number" min="0" class="field-input" />
+        </div>
+        <div>
+          <label for="edit-t-slots" class="field-label">Ukupno mjesta</label>
+          <input id="edit-t-slots" type="number" min="1" class="field-input" />
+        </div>
+      </div>
+      <div class="field-row-1">
+        <label for="edit-t-status" class="field-label">Status</label>
+        <select id="edit-t-status" class="field-input">
+          <option value="upcoming">Upcoming</option>
+          <option value="live">Live</option>
+          <option value="past">Past / concluded</option>
+        </select>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:4px;">
+        <button type="button" id="edit-t-save" class="btn btn-primary" style="flex:1;">Sačuvaj izmjene</button>
+        <button type="button" id="edit-modal-close2" class="btn btn-outline" style="flex:1;">Odustani</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 </div><!-- /#app-root -->
 
